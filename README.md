@@ -18,17 +18,17 @@ Here are some examples of how to install these dependencies on various systems:
 
 - **Termux (Android)**:
   ```bash
-  pkg install clang make pkg-config libcairo pango glib
+  pkg install git clang make pkg-config libcairo pango glib
   ```
 
 - **Arch Linux**:
   ```bash
-  sudo pacman -S base-devel pkgconf cairo pango glib2
+  sudo pacman -S git base-devel pkgconf cairo pango glib2
   ```
 
 - **Debian/Ubuntu**:
   ```bash
-  sudo apt install build-essential pkg-config libcairo2-dev libpango1.0-dev libpangocairo-1.0-0 libglib2.0-dev
+  sudo apt install git build-essential pkg-config libcairo2-dev libpango1.0-dev libpangocairo-1.0-0 libglib2.0-dev
   ```
 
 ## Build Instructions
