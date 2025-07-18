@@ -1,5 +1,4 @@
 #include "screenshot.h"
-#include <math.h>
 
 // Constants for styling
 const double PADDING = 50.0;
