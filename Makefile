@@ -14,7 +14,7 @@ TARGET = screenCODE
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) $(OBJS) -o $(TARGET) $(PKG_LIBS)
+	$(CC) $(OBJS) -o $(TARGET) $(PKG_LIBS) -lglib-2.0
 
 %.o: %.c screenshot.h
 	$(CC) $(CFLAGS) $(PKG_CFLAGS) -c $< -o $@
