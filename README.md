@@ -12,31 +12,24 @@ This is a command-line tool written in C that generates a screenshot of source c
 
 ## Dependencies
 
-This project requires the following libraries:
+To build this project, you first need to install essential build tools like `gcc`, `make`, and `pkg-config`. After that, you'll need the development libraries for Cairo, Pango, and GLib 2.0.
 
-- **Cairo**: A 2D graphics library.
-- **Pango**: A library for internationalized text layout and rendering.
-- **Pangocairo**: Pango integration with Cairo.
-- **GLib 2.0**: A general-purpose utility library.
-
-These can typically be installed via your system's package manager. Here are some examples:
+Here are some examples of how to install these dependencies on various systems:
 
 - **Termux (Android)**:
   ```bash
-  pkg install cairo pango glib
+  pkg install clang make pkg-config libcairo pango glib
   ```
 
 - **Arch Linux**:
   ```bash
-  sudo pacman -S cairo pango glib2
+  sudo pacman -S base-devel pkgconf cairo pango glib2
   ```
 
 - **Debian/Ubuntu**:
   ```bash
-  sudo apt install libcairo2-dev libpango1.0-dev libpangocairo-1.0-0 libglib2.0-dev
+  sudo apt install build-essential pkg-config libcairo2-dev libpango1.0-dev libpangocairo-1.0-0 libglib2.0-dev
   ```
-
-(Ensure you also have `gcc` and `make` installed on your system.)
 
 ## Build Instructions
 
