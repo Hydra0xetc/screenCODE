@@ -13,6 +13,9 @@ int main(int argc, char *argv[]) {
     LanguageType lang = LANG_C; // Default language is C
     gboolean use_gradient_header = TRUE; // Default to using gradient header
 
+    const char *input_filename = NULL;
+    const char *output_filename = NULL;
+
     // Parse command line arguments
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-lang") == 0) {
@@ -31,10 +34,20 @@ int main(int argc, char *argv[]) {
             }
         } else if (strcmp(argv[i], "-no-gradient") == 0) {
             use_gradient_header = FALSE;
+        } else {
+            // Assume it's an input/output file
+            if (input_filename == NULL) {
+                input_filename = argv[i];
+            } else if (output_filename == NULL) {
+                output_filename = argv[i];
+            } else {
+                fprintf(stderr, "Too many arguments provided.\n");
+                return 1;
+            }
         }
     }
 
-    if (argc < 3) {
+    if (input_filename == NULL || output_filename == NULL) {
         fprintf(stderr, "Usage: %s [OPTIONS] <input_file> <output_png>\n\n", "screenCODE");
         fprintf(stderr, "OPTIONS:\n");
         fprintf(stderr, "  -lang c|python    Specify the programming language for syntax highlighting (default: c).\n");
@@ -44,9 +57,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "  <output_png>      Path where the output PNG image will be saved.\n");
         return 1;
     }
-
-    const char *input_filename = argv[argc - 2]; // Last argument is input file
-    const char *output_filename = argv[argc - 1]; // Second to last is output file
 
     GError *error = NULL;
     char *code_content;
