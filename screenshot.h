@@ -1,7 +1,5 @@
 #ifndef SCREENSHOT_H
 #define SCREENSHOT_H
-
-#define _USE_MATH_DEFINES
 #include <math.h>
 #include <cairo.h>
 #include <pango/pangocairo.h>
