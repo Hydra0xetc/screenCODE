@@ -43,6 +43,7 @@ These can typically be installed via your system's package manager. Here are som
 To build the project, navigate to the `screenshot` directory and run `make`:
 
 ```bash
+git clone https://github.com/Hydra0xetc/screeCODE.git
 cd ~/screenCODE
 make
 ```
