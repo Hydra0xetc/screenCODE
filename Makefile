@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c99
+CFLAGS = -Wall -Wextra -std=c99 -D_USE_MATH_DEFINES
 
 PKG_CFLAGS = $(shell pkg-config --cflags cairo pango pangocairo glib-2.0)
 PKG_LIBS = $(shell pkg-config --libs cairo pango pangocairo glib-2.0)
