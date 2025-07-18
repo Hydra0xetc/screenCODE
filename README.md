@@ -40,11 +40,11 @@ These can typically be installed via your system's package manager. Here are som
 
 ## Build Instructions
 
-To build the project, navigate to the `screenshot` directory and run `make`:
+To build the project, first clone the repository and then navigate into its directory:
 
 ```bash
-git clone https://github.com/Hydra0xetc/screeCODE.git
-cd ~/screenCODE
+git clone https://github.com/Hydra0xetc/screenCODE.git
+cd screenCODE
 make
 ```
 
@@ -70,13 +70,15 @@ This will compile the source code and create an executable named `screenCODE` in
 
 **Screenshot a C file with default gradient:**
 ```bash
-./screenCODE -lang c /data/data/com.termux/files/home/test_c_code.c /data/data/com.termux/files/home/c_code_screenshot.png
+./screenCODE -lang c test_c_code.c c_code_screenshot.png
 ```
+![C Code Screenshot](images/c_code_screenshot.png)
 
 **Screenshot a Python file without gradient:**
 ```bash
-./screenCODE -lang python -no-gradient /data/data/com.termux/files/home/test_python_code.py /data/data/com.termux/files/home/python_code_screenshot.png
+./screenCODE -lang python -no-gradient test_python_code.py python_code_screenshot.png
 ```
+![Python Code Screenshot](images/python_code_screenshot.png)
 
 ## Cleaning the Project
 
