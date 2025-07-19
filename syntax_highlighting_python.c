@@ -67,8 +67,14 @@ void init_syntax_tables_python() {
 }
 
 void free_syntax_tables_python() {
-    if (keywords_ht) g_hash_table_unref(keywords_ht);
-    if (standard_functions_ht) g_hash_table_unref(standard_functions_ht);
+    if (keywords_ht) {
+        g_hash_table_unref(keywords_ht);
+        keywords_ht = NULL;
+    }
+    if (standard_functions_ht) {
+        g_hash_table_unref(standard_functions_ht);
+        standard_functions_ht = NULL;
+    }
     // preprocessor_directives_ht is not used for Python, so no need to free it here.
 }
 

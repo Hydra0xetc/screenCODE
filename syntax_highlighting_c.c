@@ -89,9 +89,18 @@ void init_syntax_tables_c() {
 }
 
 void free_syntax_tables_c() {
-    if (keywords_ht) g_hash_table_unref(keywords_ht);
-    if (preprocessor_directives_ht) g_hash_table_unref(preprocessor_directives_ht);
-    if (standard_functions_ht) g_hash_table_unref(standard_functions_ht);
+    if (keywords_ht) {
+        g_hash_table_unref(keywords_ht);
+        keywords_ht = NULL;
+    }
+    if (preprocessor_directives_ht) {
+        g_hash_table_unref(preprocessor_directives_ht);
+        preprocessor_directives_ht = NULL;
+    }
+    if (standard_functions_ht) {
+        g_hash_table_unref(standard_functions_ht);
+        standard_functions_ht = NULL;
+    }
 }
 
 // Sorted operators for longest match first (C)
