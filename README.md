@@ -73,7 +73,8 @@ This will compile the source code and create an executable named `screenCODE` in
 ```
 ![Python Code Screenshot](images/python_code_screenshot.png)
 
-## How it Works
+<details>
+<summary>## How it Works</summary>
 
 The `screenCODE` program is designed to take a source code file (C or Python), apply syntax highlighting, and then generate a PNG image of the highlighted code, resembling a code editor screenshot.
 
@@ -118,3 +119,4 @@ Here's how it works in detail:
     *   The program frees all memory allocated during the process, including the code file content, the highlighted code string, and Cairo/Pango resources.
 
 In summary, this program is a combination of a simple syntax parser that uses hash tables for speed, and a graphical rendering engine (Cairo/Pango) to transform formatted text into an aesthetically pleasing visual image.
+</details>
