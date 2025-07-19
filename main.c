@@ -8,6 +8,7 @@
 #endif
 
 #include "screenshot.h"
+#include "syntax_highlighting.h"
 
 int main(int argc, char *argv[]) {
     LanguageType lang = LANG_C; // Default language is C

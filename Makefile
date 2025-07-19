@@ -4,7 +4,7 @@ CFLAGS = -Wall -Wextra -std=c99 -D_USE_MATH_DEFINES
 PKG_CFLAGS = $(shell pkg-config --cflags cairo pango pangocairo glib-2.0)
 PKG_LIBS = $(shell pkg-config --libs cairo pango pangocairo glib-2.0)
 
-SRCS = main.c syntax_highlighting.c drawing_utils.c
+SRCS = main.c syntax_highlighting.c syntax_highlighting_c.c syntax_highlighting_python.c drawing_utils.c
 OBJS = $(SRCS:.c=.o)
 
 TARGET = screenCODE
@@ -16,7 +16,7 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CC) $(OBJS) -o $(TARGET) $(PKG_LIBS) -lglib-2.0
 
-%.o: %.c screenshot.h
+%.o: %.c screenshot.h syntax_highlighting.h
 	$(CC) $(CFLAGS) $(PKG_CFLAGS) -c $< -o $@
 
 clean:
