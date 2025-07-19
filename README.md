@@ -74,7 +74,7 @@ This will compile the source code and create an executable named `screenCODE` in
 ![Python Code Screenshot](images/python_code_screenshot.png)
 
 <details>
-<summary>## How it Works</summary>
+<summary>## How it Works (Click to expand)</summary>
 
 The `screenCODE` program is designed to take a source code file (C or Python), apply syntax highlighting, and then generate a PNG image of the highlighted code, resembling a code editor screenshot.
 
