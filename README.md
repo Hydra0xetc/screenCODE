@@ -64,20 +64,17 @@ This will compile the source code and create an executable named `screenCODE` in
 
 ### Examples:
 
-**Screenshot a C file with default gradient and line numbers:**
+**Screenshot a C file with default gradient:**
 ```bash
-./screenCODE -l test_c_code.c c_code_screenshot_with_lines.png
+./screenCODE -lang c test_c_code.c c_code_screenshot.png
 ```
+![C Code Screenshot](images/c_code_screenshot.png)
 
-**Screenshot a Python file without gradient and with line numbers:**
+**Screenshot a Python file without gradient:**
 ```bash
-./screenCODE -l -no-gradient test_python_code.py python_code_screenshot_with_lines.png
+./screenCODE -lang python -no-gradient test_python_code.py python_code_screenshot.png
 ```
-
-**Screenshot a file with auto-detected language:**
-```bash
-./screenCODE my_script.py my_script_screenshot.png
-```
+![Python Code Screenshot](images/python_code_screenshot.png)
 
 <details>
 <summary>How it Works 👇</summary>
