@@ -37,20 +37,15 @@ static void append_and_highlight(
 void init_syntax_tables_c() {
     keywords_ht = g_hash_table_new(g_str_hash, g_str_equal);
     const char* keywords[] = {
+        // C Standard Keywords (C89/C90)
         "auto", "break", "case", "char", "const", "continue", "default", "do",
         "double", "else", "enum", "extern", "float", "for", "goto", "if",
         "int", "long", "register", "return", "short", "signed", "sizeof", "static",
         "struct", "switch", "typedef", "union", "unsigned", "void", "volatile", "while",
-        "_Alignas", "_Alignof", "_Atomic", "_Bool", "_Complex", "_Generic", "_Imaginary",
-        "_Noreturn", "_Static_assert", "_Thread_local", "alignas", "alignof", "and",
-        "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexcept", "bitand",
-        "bitor", "bool", "catch", "char16_t", "char32_t", "class", "compl", "concept",
-        "const_cast", "constexpr", "decltype", "delete", "dynamic_cast", "explicit",
-        "export", "false", "friend", "inline", "mutable", "namespace", "new", "noexcept",
-        "not", "not_eq", "nullptr", "operator", "or", "or_eq", "private", "protected",
-        "public", "reinterpret_cast", "requires", "restrict", "static_assert",
-        "static_cast", "template", "this", "thread_local", "throw", "true", "try",
-        "typeid", "typename", "using", "virtual", "wchar_t", "xor", "xor_eq",
+        // C99 Keywords
+        "_Bool", "_Complex", "_Imaginary", "inline", "restrict",
+        // C11 Keywords
+        "_Alignas", "_Alignof", "_Atomic", "_Generic", "_Noreturn", "_Static_assert", "_Thread_local",
         NULL
     };
     for (int i = 0; keywords[i] != NULL; i++) {
@@ -59,7 +54,9 @@ void init_syntax_tables_c() {
 
     preprocessor_directives_ht = g_hash_table_new(g_str_hash, g_str_equal);
     const char* preprocessor_directives[] = {
-        "#include", "#define", "#undef", "#if", "#ifdef", "#ifndef", "#else", "#elif", "#endif", "#error", "#pragma", NULL
+        "#include", "#define", "#undef", "#if", "#ifdef", "#ifndef", "#else", "#elif", "#endif", "#error", "#pragma",
+        "#line", "#", // Common preprocessor directives
+        NULL
     };
     for (int i = 0; preprocessor_directives[i] != NULL; i++) {
         g_hash_table_insert(preprocessor_directives_ht, (gpointer)preprocessor_directives[i], GINT_TO_POINTER(1));
@@ -67,20 +64,65 @@ void init_syntax_tables_c() {
 
     standard_functions_ht = g_hash_table_new(g_str_hash, g_str_equal);
     const char* standard_functions[] = {
-        "printf", "scanf", "malloc", "free", "strcpy", "strcat", "strlen", "strcmp",
-        "abs", "sqrt", "sin", "cos", "tan", "log", "pow", "fopen", "fclose", "fread", "fwrite",
-        "exit", "rand", "srand", "time",
-        "calloc", "realloc", "memcpy", "memmove", "memset", "strchr", "strrchr",
-        "strstr", "strtok", "atoi", "atol", "atoll", "atof", "sprintf", "snprintf",
-        "sscanf", "fgets", "fputs", "feof", "ferror", "perror", "remove", "rename",
-        "tmpfile", "tmpnam", "setvbuf", "setbuf", "getchar", "putchar", "gets", "puts",
-        "ungetc", "fgetc", "fputc", "fgetpos", "fsetpos", "ftell", "fseek", "rewind",
-        "clearerr", "feof", "ferror", "qsort", "bsearch", "abort", "atexit", "getenv",
-        "system", "bsearch", "qsort", "labs", "llabs", "div", "ldiv", "lldiv",
-        "rand", "srand", "calloc", "realloc", "_Exit", "at_quick_exit", "quick_exit",
+        // <stdio.h>
+        "printf", "scanf", "sprintf", "snprintf", "sscanf", "fprintf", "fscanf",
+        "vprintf", "vfprintf", "vsprintf", "vsnprintf",
+        "fgetc", "fputc", "fgets", "fputs", "getc", "getchar", "gets", "putc", "putchar", "puts", "ungetc",
+        "fopen", "freopen", "fclose", "fflush", "setbuf", "setvbuf",
+        "fread", "fwrite", "fseek", "ftell", "rewind", "fgetpos", "fsetpos",
+        "clearerr", "feof", "ferror", "perror", "remove", "rename", "tmpfile", "tmpnam",
+
+        // <stdlib.h>
+        "malloc", "calloc", "realloc", "free",
+        "atoi", "atol", "atoll", "atof",
         "strtod", "strtof", "strtold", "strtol", "strtoll", "strtoul", "strtoull",
-        "memcpy", "memmove", "memset", "strcoll", "strxfrm", "gmtime", "localtime",
-        "mktime", "asctime", "ctime", "strftime", "wctomb", "mbstowcs", "wcstombs",
+        "rand", "srand", "abort", "exit", "atexit", "quick_exit", "_Exit",
+        "getenv", "system", "bsearch", "qsort",
+        "abs", "labs", "llabs", "div", "ldiv", "lldiv",
+
+        // <string.h>
+        "strcpy", "strncpy", "strcat", "strncat", "strlen",
+        "strcmp", "strncmp", "strchr", "strrchr", "strstr", "strtok",
+        "strspn", "strcspn", "strpbrk", "strerror",
+        "memset", "memcpy", "memmove", "memcmp", "memchr",
+
+        // <math.h>
+        "sin", "cos", "tan", "asin", "acos", "atan", "atan2",
+        "sinh", "cosh", "tanh",
+        "exp", "log", "log10", "pow", "sqrt",
+        "ceil", "floor", "fmod", "modf", "frexp", "ldexp", "fabs",
+        "hypot", "fmax", "fmin", "fdim", "trunc", "round", "nearbyint", "rint",
+        "copysign", "nan", "nextafter", "nexttoward", "fma",
+        "log1p", "logb", "ilogb", "expm1", "cbrt", "erf", "erfc", "lgamma", "tgamma",
+
+        // <time.h>
+        "clock", "time", "difftime", "mktime", "gmtime", "localtime", "asctime", "ctime", "strftime",
+
+        // <ctype.h>
+        "isalnum", "isalpha", "isblank", "iscntrl", "isdigit", "isgraph", "islower",
+        "isprint", "ispunct", "isspace", "isupper", "isxdigit",
+        "tolower", "toupper",
+
+        // <locale.h>
+        "setlocale", "localeconv",
+
+        // <signal.h>
+        "signal", "raise",
+
+        // <stdarg.h>
+        "va_start", "va_arg", "va_end", "va_copy",
+
+        // <wchar.h> (Wide character functions)
+        "fgetwc", "fputwc", "getwc", "getwchar", "putwc", "putwchar", "ungetwc",
+        "wcscpy", "wcsncpy", "wcscat", "wcsncat", "wcslen",
+        "wcscmp", "wcsncmp", "wcschr", "wcsrchr", "wcswcs", "wcstok", "wcsftime",
+        "wctomb", "mbstowcs", "wcstombs",
+
+        // <wctype.h> (Wide character classification)
+        "iswalnum", "iswalpha", "iswblank", "iswcntrl", "iswdigit", "iswgraph", "iswlower",
+        "iswprint", "iswpunct", "iswspace", "iswupper", "iswxdigit",
+        "towlower", "towupper",
+
         NULL
     };
     for (int i = 0; standard_functions[i] != NULL; i++) {
@@ -188,6 +230,7 @@ char* highlight_c_syntax(const char* code) {
                 while (g_ascii_isalnum(*word_scan_ptr) || *word_scan_ptr == '#') word_scan_ptr++;
                 char *word = g_strndup(current_token_start, word_scan_ptr - current_token_start);
                 if (g_hash_table_lookup(preprocessor_directives_ht, word)) {
+                    // Preprocessor directives can span to the end of the line
                     while (*word_scan_ptr != '\0' && *word_scan_ptr != '\n') word_scan_ptr++;
                     token_len = word_scan_ptr - current_token_start;
                     token_color = "#7aa2f7"; // Blue for preprocessor
@@ -241,3 +284,4 @@ char* highlight_c_syntax(const char* code) {
 
     return g_string_free(highlighted_code, FALSE);
 }
+
