@@ -41,6 +41,7 @@ void init_syntax_tables_python() {
         "class", "continue", "def", "del", "elif", "else", "except", "finally",
         "for", "from", "global", "if", "import", "in", "is", "lambda", "nonlocal",
         "not", "or", "pass", "raise", "return", "try", "while", "with", "yield",
+        "match", "case",
         NULL
     };
     for (int i = 0; keywords[i] != NULL; i++) {
@@ -58,7 +59,8 @@ void init_syntax_tables_python() {
         "id", "dir", "help", "isinstance", "issubclass", "super", "hasattr", "getattr",
         "setattr", "delattr", "callable", "frozenset", "complex", "divmod", "enumerate",
         "filter", "map", "next", "iter", "pow", "reversed", "slice", "sorted",
-        "zip", "__import__",
+        "zip", "__import__", "any", "all", "chr", "ord", "hex", "oct", "bin",
+        "classmethod", "staticmethod", "property", "bytearray", "bytes", "memoryview",
         NULL
     };
     for (int i = 0; standard_functions[i] != NULL; i++) {
