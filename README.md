@@ -6,9 +6,11 @@ This is a command-line tool written in C that generates a screenshot of source c
 
 ## Features
 
-- Syntax highlighting for C and Python.
-- Customizable window header (with or without gradient).
-- Generates PNG image output.
+- **Automatic Language Detection**: Automatically detects C or Python files based on their extension (`.c` or `.py`).
+- **Syntax Highlighting**: Provides syntax highlighting for C and Python code.
+- **Line Numbers**: Option to display line numbers (`-l` flag).
+- **Customizable Window Header**: Choose between a gradient or solid color for the window header.
+- **Generates PNG Output**: Saves the highlighted code as a PNG image.
 
 ## Dependencies
 
@@ -51,72 +53,71 @@ This will compile the source code and create an executable named `screenCODE` in
 
 ### Options:
 
-- `-lang c|python`: Specify the programming language for syntax highlighting (default: `c`).
+- `-lang c|python`: Manually specify the programming language for syntax highlighting. If omitted, the language is auto-detected from the file extension.
 - `-no-gradient`: Disable the gradient effect on the window header.
+- `-l`: Display line numbers next to the code.
 
 ### Arguments:
 
-- `<input_file>`: Path to the source code file to be screenshotted.
+- `<input_file>`: Path to the source code file to be screenshotted. Currently supports `.c` and `.py` files.
 - `<output_png>`: Path where the output PNG image will be saved.
 
 ### Examples:
 
-**Screenshot a C file with default gradient:**
+**Screenshot a C file with default gradient and line numbers:**
 ```bash
-./screenCODE -lang c test_c_code.c c_code_screenshot.png
+./screenCODE -l test_c_code.c c_code_screenshot_with_lines.png
 ```
-![C Code Screenshot](images/c_code_screenshot.png)
 
-**Screenshot a Python file without gradient:**
+**Screenshot a Python file without gradient and with line numbers:**
 ```bash
-./screenCODE -lang python -no-gradient test_python_code.py python_code_screenshot.png
+./screenCODE -l -no-gradient test_python_code.py python_code_screenshot_with_lines.png
 ```
-![Python Code Screenshot](images/python_code_screenshot.png)
+
+**Screenshot a file with auto-detected language:**
+```bash
+./screenCODE my_script.py my_script_screenshot.png
+```
 
 <details>
-<summary>## How it Works 👇</summary>
+<summary>How it Works 👇</summary>
 
 The `screenCODE` program is designed to take a source code file (C or Python), apply syntax highlighting, and then generate a PNG image of the highlighted code, resembling a code editor screenshot.
 
 Here's how it works in detail:
 
 1.  **Parsing Command Line Arguments (`main.c`)**:
-    *   The program starts by processing the arguments you provide on the command line.
-    *   `input_file` and `output_png` are mandatory arguments specifying the source code file location and the output PNG file name.
-    *   The optional `-lang c|python` argument is used to specify the programming language (defaults to C). This is crucial for the program to know which syntax highlighting rules to apply.
-    *   The optional `-no-gradient` argument is used to disable the gradient effect on the window header in the output image.
+    *   The program processes the arguments you provide. `input_file` and `output_png` are mandatory.
+    *   The `-lang` argument allows manual language specification, overriding auto-detection.
+    *   The `-no-gradient` argument disables the header gradient.
+    *   The new `-l` argument enables line numbers.
 
-2.  **Reading Code File Content (`main.c`)**:
-    *   After arguments are processed, the program reads the entire content of the specified source code file into memory as a string.
+2.  **Language Detection and Validation (`main.c`)**:
+    *   If `-lang` is not used, the program attempts to determine the language (C or Python) from the input file's extension.
+    *   It validates that the detected or specified language is supported. If not, it warns the user and exits.
 
-3.  **Syntax Highlighting (`syntax_highlighting.c`, `syntax_highlighting_c.c`, `syntax_highlighting_python.c`)**:
-    *   This is the core of the program. The `highlight_syntax(const char* code, LanguageType lang)` function in `syntax_highlighting.c` is the main entry point.
-    *   Based on the detected `LanguageType` (C or Python), this function will call the appropriate syntax table initialization function (`init_syntax_tables_c()` or `init_syntax_tables_python()`) and the specific syntax highlighting function (`highlight_c_syntax()` or `highlight_python_syntax()`).
-    *   **Syntax Table Initialization**: The `init_syntax_tables_c()` and `init_syntax_tables_python()` functions (located in their respective separate `.c` files) populate three global hash tables (`keywords_ht`, `preprocessor_directives_ht`, `standard_functions_ht`). These tables contain lists of keywords, preprocessor directives (for C), and standard functions for each language. The use of hash tables allows for very fast lookups as the program scans the code.
-    *   **Highlighting Logic**: The `highlight_c_syntax()` and `highlight_python_syntax()` functions (also in separate `.c` files) perform a character-by-character scan of the source code string.
-        *   They identify various "tokens" such as string literals (e.g., `"hello"`), character literals (e.g., `'a'`), comments (block and line), numbers, keywords, preprocessor directives (for C), standard functions, and operators.
-        *   For each recognized token, they determine the appropriate color (e.g., green for strings, gray for comments, red for keywords, etc.).
-        *   The `append_and_highlight()` function is a helper used to build the output string. It takes plain unhighlighted text and highlighted tokens, escapes HTML special characters (like `<`, `>`, `&`), and wraps the highlighted tokens with `<span foreground='color'>token</span>` tags. This results in a string formatted with Pango markup, which can be interpreted by Cairo/Pango to display colored text.
-    *   **Syntax Table Cleanup**: After highlighting is complete, the `free_syntax_tables_c()` or `free_syntax_tables_python()` functions are called to free the memory used by the hash tables. This is crucial to prevent memory leaks, especially if the program is called multiple times.
+3.  **Syntax Table Initialization (`main.c`, `syntax_highlighting_c.c`, `syntax_highlighting_python.c`)**:
+    *   Syntax highlighting rules (keywords, functions, etc.) are loaded into efficient hash tables. This is now done once at the start of `main.c` based on the detected language, improving performance and preventing memory leaks.
 
-4.  **Text Measurement and Image Dimensions (`main.c`)**:
-    *   Before drawing, the program uses Cairo and Pango to calculate the dimensions (width and height) of the highlighted code text. This is done on a temporary Cairo surface.
-    *   These dimensions are then used to determine the total size of the output PNG image, including padding and the window header height.
+4.  **Reading Code File Content (`main.c`)**:
+    *   The entire content of the source code file is read into memory.
 
-5.  **PNG Image Drawing (`main.c`, `drawing_utils.c`)**:
-    *   The program creates a new Cairo image surface with the calculated dimensions.
-    *   **Background**: Draws a background with a color gradient.
-    *   **Window Shadow**: Draws a shadow effect behind the code window.
-    *   **Window Frame**: Draws the main window frame with rounded corners (using the `draw_rounded_rectangle` function from `drawing_utils.c`).
-    *   **Window Header**: Draws the window header section. This can be a solid color or a gradient, depending on the `-no-gradient` argument.
-    *   **Window Buttons**: Draws three colored circles (red, yellow, green) resembling window control buttons.
-    *   **Drawing Code**: Finally, the Pango-markup-formatted code text is drawn onto the image surface at the correct position below the header.
+5.  **Syntax Highlighting and Line Numbering (`syntax_highlighting.c`, `syntax_highlighting_c.c`, `syntax_highlighting_python.c`)**:
+    *   The `highlight_syntax` function dispatches to language-specific highlighting functions (`highlight_c_syntax` or `highlight_python_syntax`).
+    *   These functions now process the code line by line. If line numbers are enabled, they are prepended to each line with proper formatting before syntax highlighting is applied to the entire line.
+    *   Tokens (strings, comments, numbers, keywords, operators) are identified, escaped for Pango markup, and wrapped in `<span>` tags with specific colors.
 
-6.  **Image Saving (`main.c`)**:
-    *   Once all elements are drawn, the program saves the Cairo surface as a PNG file to the location specified by `output_png`.
+6.  **Text Measurement and Image Dimensions (`main.c`)**:
+    *   Pango is used to calculate the exact dimensions of the highlighted text, including line numbers if present. This ensures the output image is sized correctly.
 
-7.  **Memory Cleanup (`main.c`)**:
-    *   The program frees all memory allocated during the process, including the code file content, the highlighted code string, and Cairo/Pango resources.
+7.  **PNG Image Drawing (`main.c`, `drawing_utils.c`)**:
+    *   A Cairo surface is created. The program draws the background, a subtle window shadow, the main window frame with rounded corners, and the window header (using the improved `draw_header` function).
+    *   Decorative window control buttons are added.
+    *   Finally, the Pango-formatted code (with or without line numbers) is drawn onto the surface.
 
-In summary, this program is a combination of a simple syntax parser that uses hash tables for speed, and a graphical rendering engine (Cairo/Pango) to transform formatted text into an aesthetically pleasing visual image.
+8.  **Image Saving (`main.c`)**:
+    *   The final image is saved as a PNG file.
+
+9.  **Memory Cleanup (`main.c`)**:
+    *   All allocated memory and resources are properly freed at the end of the program execution.
 </details>

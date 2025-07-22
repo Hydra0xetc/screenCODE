@@ -1,39 +1,51 @@
 #include "screenshot.h"
-#include "syntax_highlighting.h" // New header for declarations
+#include "syntax_highlighting.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
-#include <glib.h> // For GHashTable and GString
+#include <glib.h>
 
-// Global hash tables for faster lookups
+// Make the global hash tables available in this file.
 extern GHashTable *keywords_ht;
-extern GHashTable *preprocessor_directives_ht;
 extern GHashTable *standard_functions_ht;
 
-// Helper function to append highlighted text
-static void append_and_highlight(
+/**
+ * @brief A helper function to simplify appending highlighted code.
+ *        It takes plain text, escapes it, and wraps it in a Pango span tag with a color.
+ * @return TRUE on success, FALSE if memory allocation fails.
+ */
+static gboolean append_and_highlight(
     GString* highlighted_code,
     const char* start_of_plain_text,
     const char* current_token_start,
     const char* color,
     size_t len
 ) {
+    // Append any plain text that came before the token.
     if (start_of_plain_text != current_token_start) {
         char *plain_text = g_strndup(start_of_plain_text, current_token_start - start_of_plain_text);
+        if (!plain_text) return FALSE; // Memory allocation failed
         char *escaped_plain_text = g_markup_escape_text(plain_text, -1);
+        if (!escaped_plain_text) { g_free(plain_text); return FALSE; } // Memory allocation failed
         g_string_append(highlighted_code, escaped_plain_text);
         g_free(escaped_plain_text);
         g_free(plain_text);
     }
+    // Append the highlighted token itself.
     char *token_text = g_strndup(current_token_start, len);
+    if (!token_text) return FALSE; // Memory allocation failed
     char *escaped_token = g_markup_escape_text(token_text, -1);
+    if (!escaped_token) { g_free(token_text); return FALSE; } // Memory allocation failed
     g_string_append_printf(highlighted_code, "<span foreground='%s'>%s</span>", color, escaped_token);
     g_free(escaped_token);
     g_free(token_text);
+    return TRUE; // Success
 }
 
-// Python Language Syntax Highlighting
+/**
+ * @brief Initializes hash tables with Python keywords and built-in functions.
+ */
 void init_syntax_tables_python() {
     keywords_ht = g_hash_table_new(g_str_hash, g_str_equal);
     const char* keywords[] = {
@@ -47,9 +59,6 @@ void init_syntax_tables_python() {
     for (int i = 0; keywords[i] != NULL; i++) {
         g_hash_table_insert(keywords_ht, (gpointer)keywords[i], GINT_TO_POINTER(1));
     }
-
-    // Python doesn't have preprocessor directives like C
-    // preprocessor_directives_ht is not used for Python, so no need to initialize it here.
 
     standard_functions_ht = g_hash_table_new(g_str_hash, g_str_equal);
     const char* standard_functions[] = {
@@ -68,19 +77,17 @@ void init_syntax_tables_python() {
     }
 }
 
+/**
+ * @brief Frees the memory used by the Python syntax hash tables.
+ */
 void free_syntax_tables_python() {
-    if (keywords_ht) {
-        g_hash_table_unref(keywords_ht);
-        keywords_ht = NULL;
-    }
-    if (standard_functions_ht) {
-        g_hash_table_unref(standard_functions_ht);
-        standard_functions_ht = NULL;
-    }
-    // preprocessor_directives_ht is not used for Python, so no need to free it here.
+    if (keywords_ht) g_hash_table_unref(keywords_ht);
+    if (standard_functions_ht) g_hash_table_unref(standard_functions_ht);
+    keywords_ht = NULL;
+    standard_functions_ht = NULL;
 }
 
-// Sorted operators for longest match first (Python)
+// Python operators, sorted by length to ensure the longest match is found first.
 static const char* python_sorted_operators[] = {
     "**=", "//=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", ">>=", "<<=", // 3 chars
     "==", "!=", ">=", "<=", "**", "//", "or", "and", "not", "is", "in", // 2 chars
@@ -88,60 +95,66 @@ static const char* python_sorted_operators[] = {
     NULL
 };
 
-char* highlight_python_syntax(const char* code) {
-    GString* highlighted_code = g_string_new("");
-    const char *ptr = code;
-    const char *start_of_plain_text = code;
+/**
+ * @brief Highlights tokens on a single line of Python code.
+ * @param highlighted_line_gstring The GString to append the highlighted tokens to.
+ * @param line_content The content of the single line to highlight.
+ * @return TRUE on success, FALSE if memory allocation fails.
+ */
+static gboolean highlight_tokens_on_line_python(GString* highlighted_line_gstring, const char* line_content) {
+    const char *ptr = line_content;
+    const char *start_of_plain_text = line_content;
 
     while (*ptr != '\0') {
         const char *current_token_start = ptr;
-        gboolean token_processed = FALSE; // Flag to indicate if a token was processed
+        size_t token_len = 0;
+        const char* token_color = NULL;
 
-        // 1. Try to match triple-quoted strings first (Python specific)
-        if ((*ptr == '"' && *(ptr + 1) == '"' && *(ptr + 2) == '"') ||
-            (*ptr == '\'' && *(ptr + 1) == '\'' && *(ptr + 2) == '\'')) {
+        // 1. Strings (triple, double, single quoted)
+        if ((*ptr == '"' && *(ptr + 1) == '"' && *(ptr + 2) == '"') || (*ptr == '\'' && *(ptr + 1) == '\'' && *(ptr + 2) == '\'')) {
+            // Triple-quoted multi-line strings
             char quote_char = *ptr;
             const char *scan_ptr = ptr + 3;
             while (*scan_ptr != '\0') {
                 if (*scan_ptr == '\\' && *(scan_ptr + 1) != '\0') {
-                    scan_ptr += 2; // Skip escaped char
+                    scan_ptr++; // Skip escaped character.
                 } else if (*scan_ptr == quote_char && *(scan_ptr + 1) == quote_char && *(scan_ptr + 2) == quote_char) {
-                    scan_ptr += 3; // Include closing triple quotes
+                    scan_ptr += 3; // Include closing triple quotes.
                     break;
                 }
                 scan_ptr++;
             }
-            append_and_highlight(highlighted_code, start_of_plain_text, current_token_start, "#9ece6a", scan_ptr - ptr);
-            ptr = scan_ptr; // Advance ptr
-            start_of_plain_text = ptr;
-            token_processed = TRUE;
-        } else if (*ptr == '"' || *ptr == '\'') { // 2. Match single/double quoted strings
+            token_len = scan_ptr - ptr;
+            token_color = "#9ece6a"; // Green
+        } else if (*ptr == '"' || *ptr == '\'') {
+            // Regular single-line strings
             char quote_char = *ptr;
             const char *scan_ptr = ptr + 1;
-            while (*scan_ptr != '\0' && *scan_ptr != '\n') { // Single line strings should stop at newline
+            while (*scan_ptr != '\0' && *scan_ptr != '\n') {
                 if (*scan_ptr == '\\' && *(scan_ptr + 1) != '\0') {
-                    scan_ptr += 2; // Skip backslash and escaped char
+                    scan_ptr++; // Skip escaped character.
                 } else if (*scan_ptr == quote_char) {
-                    scan_ptr++; // Include closing quote
+                    scan_ptr++; // Include closing quote.
                     break;
                 }
                 scan_ptr++;
             }
-            append_and_highlight(highlighted_code, start_of_plain_text, current_token_start, "#9ece6a", scan_ptr - ptr);
-            ptr = scan_ptr; // Advance ptr
-            start_of_plain_text = ptr;
-            token_processed = TRUE;
-        } else if (*ptr == '#') { // 3. Match comments
+            token_len = scan_ptr - ptr;
+            token_color = "#9ece6a"; // Green
+        } 
+        // 2. Comments
+        else if (*ptr == '#') {
             const char *scan_ptr = ptr + 1;
             while (*scan_ptr != '\0' && *scan_ptr != '\n') {
                 scan_ptr++;
             }
-            append_and_highlight(highlighted_code, start_of_plain_text, current_token_start, "#545c7e", scan_ptr - ptr);
-            ptr = scan_ptr; // Advance ptr
-            start_of_plain_text = ptr;
-            token_processed = TRUE;
-        } else if (g_ascii_isdigit(*ptr) || (*ptr == '.' && g_ascii_isdigit(*(ptr + 1)))) { // 4. Match numbers
+            token_len = scan_ptr - ptr;
+            token_color = "#545c7e"; // Grey
+        } 
+        // 3. Numbers
+        else if (g_ascii_isdigit(*ptr) || (*ptr == '.' && g_ascii_isdigit(*(ptr + 1)))) {
             const char* num_scan_ptr = ptr;
+            // Python number parsing logic (simplified for common cases)
             if (*num_scan_ptr == '0' && (*(num_scan_ptr+1) == 'x' || *(num_scan_ptr+1) == 'X')) { // Hex
                 num_scan_ptr += 2;
                 while (g_ascii_isxdigit(*num_scan_ptr)) num_scan_ptr++;
@@ -163,58 +176,141 @@ char* highlight_python_syntax(const char* code) {
                     while (g_ascii_isdigit(*num_scan_ptr)) num_scan_ptr++;
                 }
             }
-            append_and_highlight(highlighted_code, start_of_plain_text, current_token_start, "#ff9e64", num_scan_ptr - ptr);
-            ptr = num_scan_ptr; // Advance ptr
-            start_of_plain_text = ptr;
-            token_processed = TRUE;
-        } else if (g_ascii_isalpha(*ptr) || *ptr == '_') { // 5. Match keywords or functions
+            token_len = num_scan_ptr - ptr;
+            token_color = "#ff9e64"; // Orange
+        } 
+        // 4. Keywords and Functions
+        else if (g_ascii_isalpha(*ptr) || *ptr == '_') {
             const char *word_scan_ptr = ptr;
             while (g_ascii_isalnum(*word_scan_ptr) || *word_scan_ptr == '_') word_scan_ptr++;
-            char *word = g_strndup(ptr, word_scan_ptr - ptr);
-            const char* color = NULL;
+            char *word = g_strndup(current_token_start, word_scan_ptr - current_token_start);
+            if (!word) return FALSE; // Memory allocation failed
+
             if (g_hash_table_lookup(keywords_ht, word)) {
-                color = "#f7768e"; // Red for keywords
+                token_len = word_scan_ptr - current_token_start;
+                token_color = "#f7768e"; // Red
             } else {
                 const char* lookahead = word_scan_ptr;
                 while (*lookahead != '\0' && isspace(*lookahead)) lookahead++;
                 if (*lookahead == '(' && g_hash_table_lookup(standard_functions_ht, word)) {
-                    color = "#7aa2f7"; // Blue for functions
+                    token_len = word_scan_ptr - current_token_start;
+                    token_color = "#7aa2f7"; // Blue
                 }
             }
-            if (color) { // Only highlight if it's a keyword or function
-                append_and_highlight(highlighted_code, start_of_plain_text, current_token_start, color, word_scan_ptr - ptr);
-                ptr = word_scan_ptr; // Advance ptr
-                start_of_plain_text = ptr;
-                token_processed = TRUE;
-            }
             g_free(word);
-        } else { // 6. Try to match operators
+        } 
+        // 5. Operators
+        else {
             for (int i = 0; python_sorted_operators[i] != NULL; i++) {
                 size_t op_len = strlen(python_sorted_operators[i]);
                 if (strncmp(ptr, python_sorted_operators[i], op_len) == 0) {
-                    append_and_highlight(highlighted_code, start_of_plain_text, current_token_start, "#bb9af7", op_len);
-                    ptr += op_len; // Advance ptr
-                    start_of_plain_text = ptr;
-                    token_processed = TRUE;
+                    token_len = op_len;
+                    token_color = "#bb9af7"; // Purple
                     break;
                 }
             }
         }
 
-        if (!token_processed) {
-            // If no special token was found, it's plain text. Just advance ptr.
+        if (token_len > 0) {
+            // If a token was matched, append it with highlighting.
+            if (!append_and_highlight(highlighted_line_gstring, start_of_plain_text, current_token_start, token_color, token_len)) {
+                return FALSE; // Memory allocation failed
+            }
+            ptr += token_len;
+            start_of_plain_text = ptr;
+        } else {
+            // Otherwise, advance one character.
             ptr++;
         }
     }
 
-    // After the loop, append any remaining plain text
+    // Append any remaining plain text at the end of the line
     if (start_of_plain_text != ptr) {
         char *plain_text = g_strndup(start_of_plain_text, ptr - start_of_plain_text);
+        if (!plain_text) return FALSE; // Memory allocation failed
         char *escaped_plain_text = g_markup_escape_text(plain_text, -1);
-        g_string_append(highlighted_code, escaped_plain_text);
+        if (!escaped_plain_text) { g_free(plain_text); return FALSE; } // Memory allocation failed
+        g_string_append(highlighted_line_gstring, escaped_plain_text);
         g_free(escaped_plain_text);
         g_free(plain_text);
     }
+    return TRUE;
+}
 
-    return g_string_free(highlighted_code, FALSE);
+/**
+ * @brief Main Python syntax highlighting logic.
+ *        It iterates through the code line by line, prepends line numbers if enabled,
+ *        and then highlights tokens on each line.
+ * @return A new string containing the code with Pango markup for highlighting, or NULL on memory allocation failure.
+ */
+char* highlight_python_syntax(const char* code, gboolean show_line_numbers) {
+    GString* final_highlighted_code = g_string_new("");
+    if (!final_highlighted_code) return NULL; // Memory allocation failed
+
+    char **code_lines = g_strsplit(code, "\n", -1);
+    if (!code_lines) {
+        g_string_free(final_highlighted_code, TRUE);
+        return NULL;
+    }
+
+    // Calculate max line number width for consistent padding
+    int max_line_number = 0;
+    for (char **line_ptr = code_lines; *line_ptr != NULL; line_ptr++) {
+        max_line_number++;
+    }
+
+    // Adjust max_line_number if the last line is empty due to a trailing newline
+    if (max_line_number > 0 && strlen(code_lines[max_line_number - 1]) == 0) {
+        max_line_number--;
+    }
+
+    int line_number_width = 0;
+    if (show_line_numbers) {
+        char temp_buf[10];
+        sprintf(temp_buf, "%d", max_line_number);
+        line_number_width = strlen(temp_buf);
+    }
+
+    int current_line_num = 1;
+    for (char **line_ptr = code_lines; *line_ptr != NULL; line_ptr++) {
+        // Skip empty last line if it was a trailing newline
+        if (show_line_numbers && current_line_num > max_line_number && strlen(*line_ptr) == 0) {
+            continue;
+        }
+
+        GString* current_line_gstring = g_string_new("");
+        if (!current_line_gstring) {
+            g_strfreev(code_lines);
+            g_string_free(final_highlighted_code, TRUE);
+            return NULL;
+        }
+
+        // Prepend line number if enabled
+        if (show_line_numbers) {
+            // Use a fixed-width format for line numbers to align code nicely
+            g_string_append_printf(current_line_gstring, "<span foreground='#545c7e'>%*d </span>", line_number_width, current_line_num);
+        }
+
+        // Highlight tokens on the current line
+        if (!highlight_tokens_on_line_python(current_line_gstring, *line_ptr)) {
+            g_string_free(current_line_gstring, TRUE);
+            g_strfreev(code_lines);
+            g_string_free(final_highlighted_code, TRUE);
+            return NULL;
+        }
+
+        g_string_append(final_highlighted_code, current_line_gstring->str);
+        g_string_free(current_line_gstring, TRUE); // Free the GString, but not its content as it's appended.
+        
+        // Only add newline if it's not the very last line and it's not an empty trailing line
+        if (!(*line_ptr == code_lines[max_line_number - 1] && strlen(*line_ptr) == 0 && max_line_number > 0)) {
+             g_string_append_c(final_highlighted_code, '\n'); // Add newline back
+        }
+
+        current_line_num++;
+    }
+
+    g_strfreev(code_lines); // Free the array of strings
+
+    return g_string_free(final_highlighted_code, FALSE);
 }

@@ -6,15 +6,23 @@
 
 #include "screenshot.h"
 
-// Constants for styling
+// Defines the visual style of the screenshot window.
 const double PADDING = 50.0;
 const double HEADER_HEIGHT = 40.0;
 const double SHADOW_OFFSET = 10.0;
-const double SHADOW_BLUR = 15.0; // Kept for reference, but not implemented with simple cairo
+const double SHADOW_BLUR = 15.0;
 const double BORDER_RADIUS = 8.0;
 const char* FONT = "Monospace 12";
 
-// Helper to draw rounded rectangles
+/**
+ * @brief Helper function to draw a rectangle with rounded corners for the window frame.
+ * @param cr The cairo drawing context.
+ * @param x Top-left x coordinate.
+ * @param y Top-left y coordinate.
+ * @param width The width of the rectangle.
+ * @param height The height of the rectangle.
+ * @param radius The corner radius.
+ */
 void draw_rounded_rectangle(cairo_t *cr, double x, double y, double width, double height, double radius) {
     cairo_new_sub_path(cr);
     cairo_arc(cr, x + width - radius, y + radius, radius, -M_PI / 2, 0);

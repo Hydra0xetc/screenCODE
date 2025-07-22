@@ -1,39 +1,53 @@
 #include "screenshot.h"
-#include "syntax_highlighting.h" // New header for declarations
+#include "syntax_highlighting.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
-#include <glib.h> // For GHashTable and GString
+#include <glib.h> // Using GLib for efficient hash tables.
 
-// Global hash tables for faster lookups
+// Make the global hash tables available in this file.
 extern GHashTable *keywords_ht;
 extern GHashTable *preprocessor_directives_ht;
 extern GHashTable *standard_functions_ht;
 
-// Helper function to append highlighted text
-static void append_and_highlight(
+/**
+ * @brief A helper function to simplify appending highlighted code.
+ *        It takes plain text, escapes it, and wraps it in a Pango span tag with a color.
+ * @return TRUE on success, FALSE if memory allocation fails.
+ */
+static gboolean append_and_highlight(
     GString* highlighted_code,
     const char* start_of_plain_text,
     const char* current_token_start,
     const char* color,
     size_t len
 ) {
+    // Append any plain text that came before the token.
     if (start_of_plain_text != current_token_start) {
         char *plain_text = g_strndup(start_of_plain_text, current_token_start - start_of_plain_text);
+        if (!plain_text) return FALSE; // Memory allocation failed
         char *escaped_plain_text = g_markup_escape_text(plain_text, -1);
+        if (!escaped_plain_text) { g_free(plain_text); return FALSE; } // Memory allocation failed
         g_string_append(highlighted_code, escaped_plain_text);
         g_free(escaped_plain_text);
         g_free(plain_text);
     }
+    // Append the highlighted token itself.
     char *token_text = g_strndup(current_token_start, len);
+    if (!token_text) return FALSE; // Memory allocation failed
     char *escaped_token = g_markup_escape_text(token_text, -1);
+    if (!escaped_token) { g_free(token_text); return FALSE; } // Memory allocation failed
     g_string_append_printf(highlighted_code, "<span foreground='%s'>%s</span>", color, escaped_token);
     g_free(escaped_token);
     g_free(token_text);
+    return TRUE; // Success
 }
 
-// C Language Syntax Highlighting
+/**
+ * @brief Initializes hash tables with C keywords, preprocessor directives, and standard functions.
+ *        This is done once to make syntax lookups much faster.
+ */
 void init_syntax_tables_c() {
     keywords_ht = g_hash_table_new(g_str_hash, g_str_equal);
     const char* keywords[] = {
@@ -130,22 +144,19 @@ void init_syntax_tables_c() {
     }
 }
 
+/**
+ * @brief Frees the memory used by the C syntax hash tables.
+ */
 void free_syntax_tables_c() {
-    if (keywords_ht) {
-        g_hash_table_unref(keywords_ht);
-        keywords_ht = NULL;
-    }
-    if (preprocessor_directives_ht) {
-        g_hash_table_unref(preprocessor_directives_ht);
-        preprocessor_directives_ht = NULL;
-    }
-    if (standard_functions_ht) {
-        g_hash_table_unref(standard_functions_ht);
-        standard_functions_ht = NULL;
-    }
+    if (keywords_ht) g_hash_table_unref(keywords_ht);
+    if (preprocessor_directives_ht) g_hash_table_unref(preprocessor_directives_ht);
+    if (standard_functions_ht) g_hash_table_unref(standard_functions_ht);
+    keywords_ht = NULL;
+    preprocessor_directives_ht = NULL;
+    standard_functions_ht = NULL;
 }
 
-// Sorted operators for longest match first (C)
+// C operators, sorted by length to ensure the longest match is found first (e.g., ">>=" before ">>", etc.).
 static const char* c_sorted_operators[] = {
     ">>=", "<<=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", // 3 chars
     "==", "!=", "<=", ">=", "&&", "||", "->", "++", "--",         // 2 chars
@@ -153,135 +164,192 @@ static const char* c_sorted_operators[] = {
     NULL
 };
 
-char* highlight_c_syntax(const char* code) {
-    GString* highlighted_code = g_string_new("");
-    const char *ptr = code;
-    const char *start_of_plain_text = code;
+/**
+ * @brief Highlights tokens on a single line of C code.
+ * @param highlighted_line_gstring The GString to append the highlighted tokens to.
+ * @param line_content The content of the single line to highlight.
+ * @return TRUE on success, FALSE if memory allocation fails.
+ */
+static gboolean highlight_tokens_on_line(GString* highlighted_line_gstring, const char* line_content) {
+    const char *ptr = line_content;
+    const char *start_of_plain_text = line_content;
 
     while (*ptr != '\0') {
         const char *current_token_start = ptr;
         size_t token_len = 0;
         const char* token_color = NULL;
 
-        // 1. Match string literals
-        if (*ptr == '"') {
+        // The order of these checks is important for correctness.
+        // For example, comments are checked before operators to correctly handle '/*'.
+
+        // 1. Strings and Chars
+        if (*ptr == '"' || *ptr == '\'') {
+            char quote_char = *ptr;
             const char *scan_ptr = ptr + 1;
             while (*scan_ptr != '\0' && *scan_ptr != '\n') {
                 if (*scan_ptr == '\\' && *(scan_ptr + 1) != '\0') {
-                    scan_ptr++; // Skip escaped char
-                } else if (*scan_ptr == '"') {
-                    scan_ptr++; // Include closing quote
+                    scan_ptr++; // Skip escaped character.
+                } else if (*scan_ptr == quote_char) {
+                    scan_ptr++; // Include closing quote.
                     break;
                 }
                 scan_ptr++;
             }
             token_len = scan_ptr - ptr;
-            token_color = "#9ece6a"; // Green for strings
-        } else if (*ptr == '\'') { // 2. Match character literals
-            const char *scan_ptr = ptr + 1;
-            while (*scan_ptr != '\0' && *scan_ptr != '\n') {
-                if (*scan_ptr == '\\' && *(scan_ptr + 1) != '\0') {
-                    scan_ptr++; // Skip escaped char
-                } else if (*scan_ptr == '\'') {
-                    scan_ptr++; // Include closing quote
-                    break;
-                }
-                scan_ptr++;
-            }
-            token_len = scan_ptr - ptr;
-            token_color = "#9ece6a"; // Green for chars
-        } else if (*ptr == '/' && *(ptr + 1) == '*') { // 3. Match block comments
+            token_color = "#9ece6a"; // Green
+        } 
+        // 2. Comments (block and line)
+        else if (*ptr == '/' && *(ptr + 1) == '*') {
             const char *scan_ptr = ptr + 2;
             while (*scan_ptr != '\0' && !(*scan_ptr == '*' && *(scan_ptr + 1) == '/')) {
                 scan_ptr++;
             }
-            if (*scan_ptr != '\0') {
-                scan_ptr += 2; // Skip "*/"
-            }
+            if (*scan_ptr != '\0') scan_ptr += 2; // Skip "*/"
             token_len = scan_ptr - ptr;
-            token_color = "#545c7e"; // Grey for comments
-        } else if (*ptr == '/' && *(ptr + 1) == '/') { // 3. Match line comments
+            token_color = "#545c7e"; // Grey
+        } else if (*ptr == '/' && *(ptr + 1) == '/') {
             const char *scan_ptr = ptr + 2;
-            while (*scan_ptr != '\0' && *scan_ptr != '\n') {
-                scan_ptr++;
-            }
+            while (*scan_ptr != '\0' && *scan_ptr != '\n') scan_ptr++;
             token_len = scan_ptr - ptr;
-            token_color = "#545c7e"; // Grey for comments
-        } else if (g_ascii_isdigit(*ptr) || (*ptr == '.' && g_ascii_isdigit(*(ptr + 1)))) { // 4. Match numbers
+            token_color = "#545c7e"; // Grey
+        } 
+        // 3. Numbers (integer, float, hex)
+        else if (g_ascii_isdigit(*ptr) || (*ptr == '.' && g_ascii_isdigit(*(ptr + 1)))) {
             const char* num_scan_ptr = ptr;
-            if (*num_scan_ptr == '0' && (*(num_scan_ptr+1) == 'x' || *(num_scan_ptr+1) == 'X')) {
-                num_scan_ptr += 2;
-                while (g_ascii_isxdigit(*num_scan_ptr)) num_scan_ptr++;
-            } else {
-                while (g_ascii_isdigit(*num_scan_ptr)) num_scan_ptr++;
-                if (*num_scan_ptr == '.') {
-                    num_scan_ptr++;
-                    while (g_ascii_isdigit(*num_scan_ptr)) num_scan_ptr++;
-                }
-            }
-            while (*num_scan_ptr == 'u' || *num_scan_ptr == 'U' || *num_scan_ptr == 'l' || *num_scan_ptr == 'L' || *num_scan_ptr == 'f' || *num_scan_ptr == 'F') {
-                num_scan_ptr++;
-            }
+            // Simple number parsing logic.
+            while (g_ascii_isdigit(*num_scan_ptr) || *num_scan_ptr == '.' || g_ascii_isxdigit(*num_scan_ptr) || *num_scan_ptr == 'x' || *num_scan_ptr == 'X') num_scan_ptr++;
             token_len = num_scan_ptr - ptr;
-            token_color = "#ff9e64"; // Orange for numbers
-        } else if (g_ascii_isalpha(*ptr) || *ptr == '_' || *ptr == '#') { // 5. Match keywords, preprocessor, functions
+            token_color = "#ff9e64"; // Orange
+        } 
+        // 4. Keywords, Preprocessor, and Functions
+        else if (g_ascii_isalpha(*ptr) || *ptr == '_' || *ptr == '#') {
             const char *word_scan_ptr = ptr;
-            if (*word_scan_ptr == '#') { // Preprocessor
-                while (g_ascii_isalnum(*word_scan_ptr) || *word_scan_ptr == '#') word_scan_ptr++;
-                char *word = g_strndup(current_token_start, word_scan_ptr - current_token_start);
-                if (g_hash_table_lookup(preprocessor_directives_ht, word)) {
-                    // Preprocessor directives can span to the end of the line
-                    while (*word_scan_ptr != '\0' && *word_scan_ptr != '\n') word_scan_ptr++;
-                    token_len = word_scan_ptr - current_token_start;
-                    token_color = "#7aa2f7"; // Blue for preprocessor
-                }
-                g_free(word);
-            } else {
-                while (g_ascii_isalnum(*word_scan_ptr) || *word_scan_ptr == '_') word_scan_ptr++;
-                char *word = g_strndup(current_token_start, word_scan_ptr - current_token_start);
-                if (g_hash_table_lookup(keywords_ht, word)) {
-                    token_len = word_scan_ptr - current_token_start;
-                    token_color = "#f7768e"; // Red for keywords
-                } else {
-                    const char* lookahead = word_scan_ptr;
-                    while (*lookahead != '\0' && isspace(*lookahead)) lookahead++;
-                    if (*lookahead == '(' && g_hash_table_lookup(standard_functions_ht, word)) {
-                        token_len = word_scan_ptr - current_token_start;
-                        token_color = "#7aa2f7"; // Blue for functions
-                    }
-                }
-                g_free(word);
+            while (g_ascii_isalnum(*word_scan_ptr) || *word_scan_ptr == '_' || *word_scan_ptr == '#') word_scan_ptr++;
+            char *word = g_strndup(current_token_start, word_scan_ptr - current_token_start);
+            if (!word) return FALSE; // Memory allocation failed
+
+            if (*ptr == '#' && g_hash_table_lookup(preprocessor_directives_ht, word)) {
+                token_len = word_scan_ptr - current_token_start;
+                token_color = "#7aa2f7"; // Blue
+            } else if (g_hash_table_lookup(keywords_ht, word)) {
+                token_len = word_scan_ptr - current_token_start;
+                token_color = "#f7768e"; // Red
             }
-        } else { // 6. Try to match operators
+            // No else-if for standard functions here, as it's handled by the main loop's logic.
+            g_free(word);
+        } 
+        // 5. Operators
+        else {
             for (int i = 0; c_sorted_operators[i] != NULL; i++) {
                 size_t op_len = strlen(c_sorted_operators[i]);
                 if (strncmp(ptr, c_sorted_operators[i], op_len) == 0) {
                     token_len = op_len;
-                    token_color = "#bb9af7"; // Purple for operators
+                    token_color = "#bb9af7"; // Purple
                     break;
                 }
             }
         }
 
         if (token_len > 0) {
-            append_and_highlight(highlighted_code, start_of_plain_text, current_token_start, token_color, token_len);
+            // If a token was matched, append it with highlighting.
+            if (!append_and_highlight(highlighted_line_gstring, start_of_plain_text, current_token_start, token_color, token_len)) {
+                return FALSE; // Memory allocation failed
+            }
             ptr += token_len;
             start_of_plain_text = ptr;
         } else {
-            // If no special token was found, it's plain text. Just advance ptr.
+            // Otherwise, advance one character.
             ptr++;
         }
     }
 
-    // After the loop, append any remaining plain text
+    // Append any remaining plain text at the end of the line
     if (start_of_plain_text != ptr) {
         char *plain_text = g_strndup(start_of_plain_text, ptr - start_of_plain_text);
+        if (!plain_text) return FALSE; // Memory allocation failed
         char *escaped_plain_text = g_markup_escape_text(plain_text, -1);
-        g_string_append(highlighted_code, escaped_plain_text);
+        if (!escaped_plain_text) { g_free(plain_text); return FALSE; } // Memory allocation failed
+        g_string_append(highlighted_line_gstring, escaped_plain_text);
         g_free(escaped_plain_text);
         g_free(plain_text);
     }
-
-    return g_string_free(highlighted_code, FALSE);
+    return TRUE;
 }
 
+/**
+ * @brief Main C syntax highlighting logic.
+ *        It iterates through the code line by line, prepends line numbers if enabled,
+ *        and then highlights tokens on each line.
+ * @return A new string containing the code with Pango markup for highlighting, or NULL on memory allocation failure.
+ */
+char* highlight_c_syntax(const char* code, gboolean show_line_numbers) {
+    GString* final_highlighted_code = g_string_new("");
+    if (!final_highlighted_code) return NULL; // Memory allocation failed
+
+    char **code_lines = g_strsplit(code, "\n", -1);
+    if (!code_lines) {
+        g_string_free(final_highlighted_code, TRUE);
+        return NULL;
+    }
+
+    // Calculate max line number width for consistent padding
+    int max_line_number = 0;
+    for (char **line_ptr = code_lines; *line_ptr != NULL; line_ptr++) {
+        max_line_number++;
+    }
+
+    // Adjust max_line_number if the last line is empty due to a trailing newline
+    if (max_line_number > 0 && strlen(code_lines[max_line_number - 1]) == 0) {
+        max_line_number--;
+    }
+
+    int line_number_width = 0;
+    if (show_line_numbers) {
+        char temp_buf[10];
+        sprintf(temp_buf, "%d", max_line_number);
+        line_number_width = strlen(temp_buf);
+    }
+
+    int current_line_num = 1;
+    for (char **line_ptr = code_lines; *line_ptr != NULL; line_ptr++) {
+        // Skip empty last line if it was a trailing newline
+        if (show_line_numbers && current_line_num > max_line_number && strlen(*line_ptr) == 0) {
+            continue;
+        }
+
+        GString* current_line_gstring = g_string_new("");
+        if (!current_line_gstring) {
+            g_strfreev(code_lines);
+            g_string_free(final_highlighted_code, TRUE);
+            return NULL;
+        }
+
+        // Prepend line number if enabled
+        if (show_line_numbers) {
+            // Use a fixed-width format for line numbers to align code nicely
+            g_string_append_printf(current_line_gstring, "<span foreground='#545c7e'>%*d </span>", line_number_width, current_line_num);
+        }
+
+        // Highlight tokens on the current line
+        if (!highlight_tokens_on_line(current_line_gstring, *line_ptr)) {
+            g_string_free(current_line_gstring, TRUE);
+            g_strfreev(code_lines);
+            g_string_free(final_highlighted_code, TRUE);
+            return NULL;
+        }
+
+        g_string_append(final_highlighted_code, current_line_gstring->str);
+        g_string_free(current_line_gstring, TRUE); // Free the GString, but not its content as it's appended.
+        
+        // Only add newline if it's not the very last line and it's not an empty trailing line
+        if (!(*line_ptr == code_lines[max_line_number - 1] && strlen(*line_ptr) == 0 && max_line_number > 0)) {
+             g_string_append_c(final_highlighted_code, '\n'); // Add newline back
+        }
+
+        current_line_num++;
+    }
+
+    g_strfreev(code_lines); // Free the array of strings
+
+    return g_string_free(final_highlighted_code, FALSE);
+}
