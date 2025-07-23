@@ -96,12 +96,13 @@ static const char* python_sorted_operators[] = {
 };
 
 /**
- * @brief Highlights tokens on a single line of Python code.
+ * @brief Highlights tokens on a single line of Python code, handling multi-line string/comment state.
  * @param highlighted_line_gstring The GString to append the highlighted tokens to.
  * @param line_content The content of the single line to highlight.
+ * @param in_multiline_string A pointer to a gchar that tracks if we are inside a multi-line string, and what quote char it is.
  * @return TRUE on success, FALSE if memory allocation fails.
  */
-static gboolean highlight_tokens_on_line_python(GString* highlighted_line_gstring, const char* line_content) {
+static gboolean highlight_tokens_on_line_python(GString* highlighted_line_gstring, const char* line_content, gchar *in_multiline_string) {
     const char *ptr = line_content;
     const char *start_of_plain_text = line_content;
 
@@ -110,103 +111,118 @@ static gboolean highlight_tokens_on_line_python(GString* highlighted_line_gstrin
         size_t token_len = 0;
         const char* token_color = NULL;
 
-        // 1. Strings (triple, double, single quoted)
-        if ((*ptr == '"' && *(ptr + 1) == '"' && *(ptr + 2) == '"') || (*ptr == '\'' && *(ptr + 1) == '\'' && *(ptr + 2) == '\'')) {
-            // Triple-quoted multi-line strings
-            char quote_char = *ptr;
-            const char *scan_ptr = ptr + 3;
-            while (*scan_ptr != '\0') {
-                if (*scan_ptr == '\\' && *(scan_ptr + 1) != '\0') {
-                    scan_ptr++; // Skip escaped character.
-                } else if (*scan_ptr == quote_char && *(scan_ptr + 1) == quote_char && *(scan_ptr + 2) == quote_char) {
-                    scan_ptr += 3; // Include closing triple quotes.
-                    break;
-                }
+        // If we are inside a multi-line string, we have special handling.
+        if (*in_multiline_string != 0) {
+            const char *scan_ptr = ptr;
+            char quote_char = *in_multiline_string;
+            while (*scan_ptr != '\0' && !(*scan_ptr == quote_char && *(scan_ptr + 1) == quote_char && *(scan_ptr + 2) == quote_char)) {
                 scan_ptr++;
             }
-            token_len = scan_ptr - ptr;
-            token_color = "#9ece6a"; // Green
-        } else if (*ptr == '"' || *ptr == '\'') {
-            // Regular single-line strings
-            char quote_char = *ptr;
-            const char *scan_ptr = ptr + 1;
-            while (*scan_ptr != '\0' && *scan_ptr != '\n') {
-                if (*scan_ptr == '\\' && *(scan_ptr + 1) != '\0') {
-                    scan_ptr++; // Skip escaped character.
-                } else if (*scan_ptr == quote_char) {
-                    scan_ptr++; // Include closing quote.
-                    break;
-                }
-                scan_ptr++;
-            }
-            token_len = scan_ptr - ptr;
-            token_color = "#9ece6a"; // Green
-        } 
-        // 2. Comments
-        else if (*ptr == '#') {
-            const char *scan_ptr = ptr + 1;
-            while (*scan_ptr != '\0' && *scan_ptr != '\n') {
-                scan_ptr++;
-            }
-            token_len = scan_ptr - ptr;
-            token_color = "#545c7e"; // Grey
-        } 
-        // 3. Numbers
-        else if (g_ascii_isdigit(*ptr) || (*ptr == '.' && g_ascii_isdigit(*(ptr + 1)))) {
-            const char* num_scan_ptr = ptr;
-            // Python number parsing logic (simplified for common cases)
-            if (*num_scan_ptr == '0' && (*(num_scan_ptr+1) == 'x' || *(num_scan_ptr+1) == 'X')) { // Hex
-                num_scan_ptr += 2;
-                while (g_ascii_isxdigit(*num_scan_ptr)) num_scan_ptr++;
-            } else if (*num_scan_ptr == '0' && (*(num_scan_ptr+1) == 'o' || *(num_scan_ptr+1) == 'O')) { // Octal
-                num_scan_ptr += 2;
-                while (*num_scan_ptr >= '0' && *num_scan_ptr <= '7') num_scan_ptr++;
-            } else if (*num_scan_ptr == '0' && (*(num_scan_ptr+1) == 'b' || *(num_scan_ptr+1) == 'B')) { // Binary
-                num_scan_ptr += 2;
-                while (*num_scan_ptr == '0' || *num_scan_ptr == '1') num_scan_ptr++;
-            } else { // Decimal or float
-                while (g_ascii_isdigit(*num_scan_ptr)) num_scan_ptr++;
-                if (*num_scan_ptr == '.') {
-                    num_scan_ptr++;
-                    while (g_ascii_isdigit(*num_scan_ptr)) num_scan_ptr++;
-                }
-                if (*num_scan_ptr == 'e' || *num_scan_ptr == 'E') { // Exponent
-                    num_scan_ptr++;
-                    if (*num_scan_ptr == '+' || *num_scan_ptr == '-') num_scan_ptr++;
-                    while (g_ascii_isdigit(*num_scan_ptr)) num_scan_ptr++;
-                }
-            }
-            token_len = num_scan_ptr - ptr;
-            token_color = "#ff9e64"; // Orange
-        } 
-        // 4. Keywords and Functions
-        else if (g_ascii_isalpha(*ptr) || *ptr == '_') {
-            const char *word_scan_ptr = ptr;
-            while (g_ascii_isalnum(*word_scan_ptr) || *word_scan_ptr == '_') word_scan_ptr++;
-            char *word = g_strndup(current_token_start, word_scan_ptr - current_token_start);
-            if (!word) return FALSE; // Memory allocation failed
 
-            if (g_hash_table_lookup(keywords_ht, word)) {
-                token_len = word_scan_ptr - current_token_start;
-                token_color = "#f7768e"; // Red
-            } else {
-                const char* lookahead = word_scan_ptr;
-                while (*lookahead != '\0' && isspace(*lookahead)) lookahead++;
-                if (*lookahead == '(' && g_hash_table_lookup(standard_functions_ht, word)) {
-                    token_len = word_scan_ptr - current_token_start;
-                    token_color = "#7aa2f7"; // Blue
-                }
+            if (*scan_ptr == '\0') { // End of line, but not end of string
+                token_len = strlen(ptr);
+                token_color = "#9ece6a"; // Green
+            } else { // Found closing triple quotes
+                token_len = (scan_ptr + 3) - ptr;
+                token_color = "#9ece6a"; // Green
+                *in_multiline_string = 0; // We are now out of the multi-line string.
             }
-            g_free(word);
-        } 
-        // 5. Operators
-        else {
-            for (int i = 0; python_sorted_operators[i] != NULL; i++) {
-                size_t op_len = strlen(python_sorted_operators[i]);
-                if (strncmp(ptr, python_sorted_operators[i], op_len) == 0) {
-                    token_len = op_len;
-                    token_color = "#bb9af7"; // Purple
-                    break;
+        } else {
+            // 1. Strings (triple, double, single quoted)
+            if ((*ptr == '"' && *(ptr + 1) == '"' && *(ptr + 2) == '"') || (*ptr == '\'' && *(ptr + 1) == '\'' && *(ptr + 2) == '\'')) {
+                char quote_char = *ptr;
+                const char *scan_ptr = ptr + 3;
+                *in_multiline_string = quote_char; // Enter multi-line string state
+                while (*scan_ptr != '\0' && !(*scan_ptr == quote_char && *(scan_ptr + 1) == quote_char && *(scan_ptr + 2) == quote_char)) {
+                    scan_ptr++;
+                }
+                if (*scan_ptr != '\0') { // String ends on the same line
+                    scan_ptr += 3; // Skip closing quotes
+                    *in_multiline_string = 0; // Exit state immediately
+                }
+                token_len = scan_ptr - ptr;
+                token_color = "#9ece6a"; // Green
+            } else if (*ptr == '"' || *ptr == '\'') {
+                // Regular single-line strings
+                char quote_char = *ptr;
+                const char *scan_ptr = ptr + 1;
+                while (*scan_ptr != '\0' && *scan_ptr != '\n') {
+                    if (*scan_ptr == '\\' && *(scan_ptr + 1) != '\0') {
+                        scan_ptr++; // Skip escaped character.
+                    } else if (*scan_ptr == quote_char) {
+                        scan_ptr++; // Include closing quote.
+                        break;
+                    }
+                    scan_ptr++;
+                }
+                token_len = scan_ptr - ptr;
+                token_color = "#9ece6a"; // Green
+            } 
+            // 2. Comments
+            else if (*ptr == '#') {
+                const char *scan_ptr = ptr + 1;
+                while (*scan_ptr != '\0' && *scan_ptr != '\n') {
+                    scan_ptr++;
+                }
+                token_len = scan_ptr - ptr;
+                token_color = "#545c7e"; // Grey
+            } 
+            // 3. Numbers
+            else if (g_ascii_isdigit(*ptr) || (*ptr == '.' && g_ascii_isdigit(*(ptr + 1)))) {
+                const char* num_scan_ptr = ptr;
+                if (*num_scan_ptr == '0' && (*(num_scan_ptr+1) == 'x' || *(num_scan_ptr+1) == 'X')) { // Hex
+                    num_scan_ptr += 2;
+                    while (g_ascii_isxdigit(*num_scan_ptr)) num_scan_ptr++;
+                } else if (*num_scan_ptr == '0' && (*(num_scan_ptr+1) == 'o' || *(num_scan_ptr+1) == 'O')) { // Octal
+                    num_scan_ptr += 2;
+                    while (*num_scan_ptr >= '0' && *num_scan_ptr <= '7') num_scan_ptr++;
+                } else if (*num_scan_ptr == '0' && (*(num_scan_ptr+1) == 'b' || *(num_scan_ptr+1) == 'B')) { // Binary
+                    num_scan_ptr += 2;
+                    while (*num_scan_ptr == '0' || *num_scan_ptr == '1') num_scan_ptr++;
+                } else { // Decimal or float
+                    while (g_ascii_isdigit(*num_scan_ptr)) num_scan_ptr++;
+                    if (*num_scan_ptr == '.') {
+                        num_scan_ptr++;
+                        while (g_ascii_isdigit(*num_scan_ptr)) num_scan_ptr++;
+                    }
+                    if (*num_scan_ptr == 'e' || *num_scan_ptr == 'E') { // Exponent
+                        num_scan_ptr++;
+                        if (*num_scan_ptr == '+' || *num_scan_ptr == '-') num_scan_ptr++;
+                        while (g_ascii_isdigit(*num_scan_ptr)) num_scan_ptr++;
+                    }
+                }
+                token_len = num_scan_ptr - ptr;
+                token_color = "#ff9e64"; // Orange
+            } 
+            // 4. Keywords and Functions
+            else if (g_ascii_isalpha(*ptr) || *ptr == '_') {
+                const char *word_scan_ptr = ptr;
+                while (g_ascii_isalnum(*word_scan_ptr) || *word_scan_ptr == '_') word_scan_ptr++;
+                char *word = g_strndup(current_token_start, word_scan_ptr - current_token_start);
+                if (!word) return FALSE; // Memory allocation failed
+
+                if (g_hash_table_lookup(keywords_ht, word)) {
+                    token_len = word_scan_ptr - current_token_start;
+                    token_color = "#f7768e"; // Red
+                } else {
+                    const char* lookahead = word_scan_ptr;
+                    while (*lookahead != '\0' && isspace(*lookahead)) lookahead++;
+                    if (*lookahead == '(' && g_hash_table_lookup(standard_functions_ht, word)) {
+                        token_len = word_scan_ptr - current_token_start;
+                        token_color = "#7aa2f7"; // Blue
+                    }
+                }
+                g_free(word);
+            } 
+            // 5. Operators
+            else {
+                for (int i = 0; python_sorted_operators[i] != NULL; i++) {
+                    size_t op_len = strlen(python_sorted_operators[i]);
+                    if (strncmp(ptr, python_sorted_operators[i], op_len) == 0) {
+                        token_len = op_len;
+                        token_color = "#bb9af7"; // Purple
+                        break;
+                    }
                 }
             }
         }
@@ -266,12 +282,16 @@ char* highlight_python_syntax(const char* code, gboolean show_line_numbers) {
 
     int line_number_width = 0;
     if (show_line_numbers) {
-        char temp_buf[10];
-        sprintf(temp_buf, "%d", max_line_number);
+        // Use snprintf for safety to prevent buffer overflows.
+        // A buffer of 12 is safe for typical 32-bit integer line numbers.
+        char temp_buf[12];
+        snprintf(temp_buf, sizeof(temp_buf), "%d", max_line_number);
         line_number_width = strlen(temp_buf);
     }
 
     int current_line_num = 1;
+    gchar in_multiline_string = 0; // State tracking for multi-line strings, 0 means no, '"' or '\'' means yes
+
     for (char **line_ptr = code_lines; *line_ptr != NULL; line_ptr++) {
         // Skip empty last line if it was a trailing newline
         if (show_line_numbers && current_line_num > max_line_number && strlen(*line_ptr) == 0) {
@@ -292,7 +312,7 @@ char* highlight_python_syntax(const char* code, gboolean show_line_numbers) {
         }
 
         // Highlight tokens on the current line
-        if (!highlight_tokens_on_line_python(current_line_gstring, *line_ptr)) {
+        if (!highlight_tokens_on_line_python(current_line_gstring, *line_ptr, &in_multiline_string)) {
             g_string_free(current_line_gstring, TRUE);
             g_strfreev(code_lines);
             g_string_free(final_highlighted_code, TRUE);
