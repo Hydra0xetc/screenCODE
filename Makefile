@@ -1,11 +1,18 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c99 -D_USE_MATH_DEFINES
+LDFLAGS = $(shell pkg-config --libs cairo pango pangocairo glib-2.0) -lglib-2.0
 
-PKG_CFLAGS = $(shell pkg-config --cflags cairo pango pangocairo glib-2.0)
-PKG_LIBS = $(shell pkg-config --libs cairo pango pangocairo glib-2.0)
+# Add include path for pkg-config and our src dir
+CPPFLAGS = $(shell pkg-config --cflags cairo pango pangocairo glib-2.0) -Isrc
 
-SRCS = main.c syntax_highlighting.c syntax_highlighting_c.c syntax_highlighting_python.c drawing_utils.c
-OBJS = $(SRCS:.c=.o)
+# Source directory
+SRC_DIR = src
+
+# Find all .c files in the source directory, excluding test files
+SRCS = $(filter-out $(SRC_DIR)/test_c_code.c, $(wildcard $(SRC_DIR)/*.c))
+
+# Create object file names in the root directory
+OBJS = $(patsubst $(SRC_DIR)/%.c,%.o,$(SRCS))
 
 TARGET = screenCODE
 
@@ -14,10 +21,11 @@ TARGET = screenCODE
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) $(OBJS) -o $(TARGET) $(PKG_LIBS) -lglib-2.0
+	$(CC) $(OBJS) -o $(TARGET) $(LDFLAGS)
 
-%.o: %.c screenshot.h syntax_highlighting.h
-	$(CC) $(CFLAGS) $(PKG_CFLAGS) -c $< -o $@
+# Rule to compile .c files from the src directory into .o files in the root
+%.o: $(SRC_DIR)/%.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 clean:
 	rm -f $(OBJS) $(TARGET) *.d *.gch
