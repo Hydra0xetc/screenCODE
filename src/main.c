@@ -108,13 +108,11 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    cairo_surface_t *temp_surface = cairo_image_surface_create(CAIRO_FORMAT_A8, 1, 1); // Small surface for layout calculation
+    cairo_surface_t *temp_surface = cairo_image_surface_create(CAIRO_FORMAT_A8, 0, 0);
     cairo_t *temp_cr = cairo_create(temp_surface);
     PangoLayout *layout = pango_cairo_create_layout(temp_cr);
     PangoFontDescription *font_desc = pango_font_description_from_string(FONT);
     pango_layout_set_font_description(layout, font_desc);
-    pango_layout_set_width(layout, DEFAULT_CODE_WIDTH * PANGO_SCALE); // Set width for wrapping
-    pango_layout_set_wrap(layout, PANGO_WRAP_CHAR); // Enable character wrapping
 
     // Pass show_line_numbers to highlight_syntax
     char* highlighted_text = highlight_syntax(code_content, lang, show_line_numbers);
@@ -132,8 +130,8 @@ int main(int argc, char *argv[]) {
     int text_width_pixels, text_height_pixels;
     pango_layout_get_pixel_size(layout, &text_width_pixels, &text_height_pixels);
 
-    // Use DEFAULT_CODE_WIDTH for the code area width, as text is wrapped to this width
-    int img_width = DEFAULT_CODE_WIDTH + (2 * PADDING);
+    // Calculate image dimensions based on wrapped text size
+    int img_width = text_width_pixels + (2 * PADDING);
     int img_height = HEADER_HEIGHT + text_height_pixels + (3 * PADDING);
 
     g_object_unref(layout);
@@ -179,8 +177,6 @@ int main(int argc, char *argv[]) {
     layout = pango_cairo_create_layout(cr);
     font_desc = pango_font_description_from_string(FONT);
     pango_layout_set_font_description(layout, font_desc);
-    pango_layout_set_width(layout, DEFAULT_CODE_WIDTH * PANGO_SCALE); // Set width for wrapping
-    pango_layout_set_wrap(layout, PANGO_WRAP_CHAR); // Enable character wrapping
     pango_layout_set_markup(layout, highlighted_text, -1);
 
     cairo_set_source_rgb(cr, 0.6627, 0.6941, 0.8392); // Text color

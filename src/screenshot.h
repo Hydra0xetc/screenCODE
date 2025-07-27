@@ -12,7 +12,6 @@ extern const double SHADOW_OFFSET;
 extern const double SHADOW_BLUR;
 extern const double BORDER_RADIUS;
 extern const char* FONT;
-extern const double DEFAULT_CODE_WIDTH;
 
 // Enum for language type
 
