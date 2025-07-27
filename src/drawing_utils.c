@@ -13,6 +13,7 @@ const double SHADOW_OFFSET = 10.0;
 const double SHADOW_BLUR = 15.0;
 const double BORDER_RADIUS = 8.0;
 const char* FONT = "Monospace 12";
+const double DEFAULT_CODE_WIDTH = 1200.0; // Default width for the code area
 
 /**
  * @brief Helper function to draw a rectangle with rounded corners for the window frame.

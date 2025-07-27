@@ -33,12 +33,19 @@ static gboolean append_and_highlight(
         g_free(escaped_plain_text);
         g_free(plain_text);
     }
+
     // Append the highlighted token itself.
     char *token_text = g_strndup(current_token_start, len);
     if (!token_text) return FALSE; // Memory allocation failed
     char *escaped_token = g_markup_escape_text(token_text, -1);
     if (!escaped_token) { g_free(token_text); return FALSE; } // Memory allocation failed
-    g_string_append_printf(highlighted_code, "<span foreground='%s'>%s</span>", color, escaped_token);
+
+    if (color) {
+        g_string_append_printf(highlighted_code, "<span foreground='%s'>%s</span>", color, escaped_token);
+    } else {
+        g_string_append(highlighted_code, escaped_token);
+    }
+
     g_free(escaped_token);
     g_free(token_text);
     return TRUE; // Success
@@ -267,21 +274,34 @@ static gboolean highlight_tokens_on_line(GString* highlighted_line_gstring, cons
             const char* num_scan_ptr = ptr;
             while (g_ascii_isdigit(*num_scan_ptr) || *num_scan_ptr == '.' || g_ascii_isxdigit(*num_scan_ptr) || *num_scan_ptr == 'x' || *num_scan_ptr == 'X') num_scan_ptr++;
             token_len = num_scan_ptr - ptr;
-            token_color = "#ff9e64";
+
+            // Add check for word boundary after number
+            if (*num_scan_ptr != '\0' && (g_ascii_isalnum(*num_scan_ptr) || *num_scan_ptr == '_')) {
+                // This is part of an identifier, not a standalone number
+                token_color = NULL; // Do not highlight
+            } else {
+                token_color = "#ff9e64"; // Highlight as number
+            }
         }
         else if (g_ascii_isalpha(*ptr) || *ptr == '_') {
             const char *word_scan_ptr = ptr;
             while (g_ascii_isalnum(*word_scan_ptr) || *word_scan_ptr == '_') word_scan_ptr++;
             char *word = g_strndup(ptr, word_scan_ptr - ptr);
             if (!word) return FALSE;
-            if (g_hash_table_lookup(keywords_ht, word)) {
-                token_color = "#f7768e";
-            } else if (g_hash_table_lookup(standard_functions_ht, word)) {
-                 const char* lookahead = word_scan_ptr;
-                 while (*lookahead != '\0' && isspace(*lookahead)) lookahead++;
-                 if (*lookahead == '(') {
-                    token_color = "#7aa2f7";
-                 }
+
+            // Check if the character after the word is a word boundary
+            gboolean is_word_boundary = (*word_scan_ptr == '\0' || (!g_ascii_isalnum(*word_scan_ptr) && *word_scan_ptr != '_'));
+
+            if (is_word_boundary) { // Only highlight if it's a whole word
+                if (g_hash_table_lookup(keywords_ht, word)) {
+                    token_color = "#f7768e";
+                } else if (g_hash_table_lookup(standard_functions_ht, word)) {
+                     const char* lookahead = word_scan_ptr;
+                     while (*lookahead != '\0' && isspace(*lookahead)) lookahead++;
+                     if (*lookahead == '(') {
+                        token_color = "#7aa2f7";
+                     }
+                }
             }
             g_free(word);
             token_len = word_scan_ptr - ptr;
@@ -298,13 +318,15 @@ static gboolean highlight_tokens_on_line(GString* highlighted_line_gstring, cons
         }
 
         if (token_len > 0) {
-            if (token_color) {
-                if (!append_and_highlight(highlighted_line_gstring, start_of_plain_text, current_token_start, token_color, token_len)) return FALSE;
-            }
+            if (!append_and_highlight(highlighted_line_gstring, start_of_plain_text, current_token_start, token_color, token_len)) return FALSE;
             ptr += token_len;
             start_of_plain_text = ptr;
         } else {
+            // No specific token matched, so this single character is plain text.
+            // Append it as plain text.
+            if (!append_and_highlight(highlighted_line_gstring, start_of_plain_text, current_token_start, NULL, 1)) return FALSE;
             ptr++;
+            start_of_plain_text = ptr; // Crucial: advance start_of_plain_text
         }
     }
 

@@ -37,7 +37,13 @@ static gboolean append_and_highlight(
     if (!token_text) return FALSE; // Memory allocation failed
     char *escaped_token = g_markup_escape_text(token_text, -1);
     if (!escaped_token) { g_free(token_text); return FALSE; } // Memory allocation failed
-    g_string_append_printf(highlighted_code, "<span foreground='%s'>%s</span>", color, escaped_token);
+
+    if (color) {
+        g_string_append_printf(highlighted_code, "<span foreground='%s'>%s</span>", color, escaped_token);
+    } else {
+        g_string_append(highlighted_code, escaped_token);
+    }
+
     g_free(escaped_token);
     g_free(token_text);
     return TRUE; // Success
@@ -192,7 +198,14 @@ static gboolean highlight_tokens_on_line_python(GString* highlighted_line_gstrin
                     }
                 }
                 token_len = num_scan_ptr - ptr;
-                token_color = "#ff9e64"; // Orange
+
+                // Add check for word boundary after number
+                if (*num_scan_ptr != '\0' && (g_ascii_isalnum(*num_scan_ptr) || *num_scan_ptr == '_')) {
+                    // This is part of an identifier, not a standalone number
+                    token_color = NULL; // Do not highlight
+                } else {
+                    token_color = "#ff9e64"; // Highlight as number
+                }
             } 
             // 4. Keywords and Functions
             else if (g_ascii_isalpha(*ptr) || *ptr == '_') {
@@ -201,15 +214,20 @@ static gboolean highlight_tokens_on_line_python(GString* highlighted_line_gstrin
                 char *word = g_strndup(current_token_start, word_scan_ptr - current_token_start);
                 if (!word) return FALSE; // Memory allocation failed
 
-                if (g_hash_table_lookup(keywords_ht, word)) {
-                    token_len = word_scan_ptr - current_token_start;
-                    token_color = "#f7768e"; // Red
-                } else {
-                    const char* lookahead = word_scan_ptr;
-                    while (*lookahead != '\0' && isspace(*lookahead)) lookahead++;
-                    if (*lookahead == '(' && g_hash_table_lookup(standard_functions_ht, word)) {
+                // Check if the character after the word is a word boundary
+                gboolean is_word_boundary = (*word_scan_ptr == '\0' || (!g_ascii_isalnum(*word_scan_ptr) && *word_scan_ptr != '_'));
+
+                if (is_word_boundary) { // Only highlight if it's a whole word
+                    if (g_hash_table_lookup(keywords_ht, word)) {
                         token_len = word_scan_ptr - current_token_start;
-                        token_color = "#7aa2f7"; // Blue
+                        token_color = "#f7768e"; // Red
+                    } else {
+                        const char* lookahead = word_scan_ptr;
+                        while (*lookahead != '\0' && isspace(*lookahead)) lookahead++;
+                        if (*lookahead == '(' && g_hash_table_lookup(standard_functions_ht, word)) {
+                            token_len = word_scan_ptr - current_token_start;
+                            token_color = "#7aa2f7"; // Blue
+                        }
                     }
                 }
                 g_free(word);
@@ -235,8 +253,11 @@ static gboolean highlight_tokens_on_line_python(GString* highlighted_line_gstrin
             ptr += token_len;
             start_of_plain_text = ptr;
         } else {
-            // Otherwise, advance one character.
+            // No specific token matched, so this single character is plain text.
+            // Append it as plain text.
+            if (!append_and_highlight(highlighted_line_gstring, start_of_plain_text, current_token_start, NULL, 1)) return FALSE;
             ptr++;
+            start_of_plain_text = ptr; // Crucial: advance start_of_plain_text
         }
     }
 
