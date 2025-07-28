@@ -77,10 +77,6 @@ This will compile the source code and create an executable named `screenCODE` in
 ./screenCODE -lang python -no-gradient test_python_code.py python_code_screenshot.png
 ```
 ![Python Code Screenshot](images/python_code_screenshot.png)
-
-**Screenshot a C file without syntax highlighting:**
-```bash
-./screenCODE -no-color test_c_code.c no_color_c_code_screenshot.png
 ```
 
 <details>
