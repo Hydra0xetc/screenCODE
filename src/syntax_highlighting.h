@@ -29,6 +29,6 @@ void free_syntax_tables_python();
 char* highlight_python_syntax(const char* code, gboolean show_line_numbers);
 
 // The main function that dispatches to the correct language highlighter.
-char* highlight_syntax(const char* code, LanguageType lang, gboolean show_line_numbers);
+char* highlight_syntax(const char* code, LanguageType lang, gboolean show_line_numbers, gboolean no_color);
 
 #endif // SYNTAX_HIGHLIGHTING_H

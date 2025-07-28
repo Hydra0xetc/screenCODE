@@ -9,6 +9,7 @@
 
 #include "screenshot.h"
 #include "syntax_highlighting.h"
+#include <fontconfig/fontconfig.h>
 
 // Helper function to detect the programming language from the filename extension.
 static LanguageType get_language_from_filename(const char *filename) {
@@ -41,10 +42,12 @@ void draw_header(cairo_t *cr, double x, double y, double width, double height, d
 }
 
 int main(int argc, char *argv[]) {
+    FcInit();
     LanguageType lang = LANG_UNKNOWN;
     gboolean use_gradient_header = TRUE;
     gboolean lang_option_used = FALSE;
     gboolean show_line_numbers = FALSE; // New flag for line numbers
+    gboolean no_color = FALSE; // New flag for no syntax highlighting
 
     const char *input_filename = NULL;
     const char *output_filename = NULL;
@@ -64,6 +67,8 @@ int main(int argc, char *argv[]) {
             use_gradient_header = FALSE;
         } else if (strcmp(argv[i], "-l") == 0) { // New flag parsing
             show_line_numbers = TRUE;
+        } else if (strcmp(argv[i], "-no-color") == 0) {
+            no_color = TRUE;
         } else if (input_filename == NULL) {
             input_filename = argv[i];
         } else if (output_filename == NULL) {
@@ -79,7 +84,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "OPTIONS:\n");
         fprintf(stderr, "  -lang c|python    Specify language (default: auto-detect from extension).\n");
         fprintf(stderr, "  -no-gradient      Disable the gradient effect on the window header.\n");
-        fprintf(stderr, "  -l                Show line numbers.\n"); // New usage info
+        fprintf(stderr, "  -l                Show line numbers.\n");
+        fprintf(stderr, "  -no-color         Disable syntax highlighting.\n");
         return 1;
     }
 
@@ -115,7 +121,7 @@ int main(int argc, char *argv[]) {
     pango_layout_set_font_description(layout, font_desc);
 
     // Pass show_line_numbers to highlight_syntax
-    char* highlighted_text = highlight_syntax(code_content, lang, show_line_numbers);
+    char* highlighted_text = highlight_syntax(code_content, lang, show_line_numbers, no_color);
     if (!highlighted_text) { // Check for memory allocation failure from highlight_syntax
         fprintf(stderr, "Error: Failed to highlight syntax due to memory allocation failure.\n");
         g_free(code_content);

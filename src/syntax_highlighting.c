@@ -19,7 +19,10 @@ GHashTable *standard_functions_ht = NULL;
  * @param show_line_numbers Boolean flag to indicate if line numbers should be shown.
  * @return A new string containing the code with Pango markup for highlighting.
  */
-char* highlight_syntax(const char* code, LanguageType lang, gboolean show_line_numbers) {
+char* highlight_syntax(const char* code, LanguageType lang, gboolean show_line_numbers, gboolean no_color) {
+    if (no_color) {
+        return g_markup_escape_text(code, -1);
+    }
     // The initialization and freeing of syntax tables is now handled in main.c.
     // This function now only dispatches to the correct highlighter.
 
