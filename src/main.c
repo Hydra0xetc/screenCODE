@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
 
     // Calculate image dimensions based on wrapped text size
     int img_width = text_width_pixels + (2 * PADDING);
-    int img_height = HEADER_HEIGHT + text_height_pixels + (3 * PADDING);
+    int img_height = HEADER_HEIGHT + text_height_pixels + (2 * PADDING);
 
     g_object_unref(layout);
     pango_font_description_free(font_desc);
