@@ -77,7 +77,6 @@ This will compile the source code and create an executable named `screenCODE` in
 ./screenCODE -lang python -no-gradient test_python_code.py python_code_screenshot.png
 ```
 ![Python Code Screenshot](images/python_code_screenshot.png)
-```
 
 <details>
 <summary>How it Works 👇</summary>
