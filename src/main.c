@@ -94,11 +94,11 @@ int main(int argc, char *argv[]) {
         lang = get_language_from_filename(input_filename);
     }
 
-    // Validate that the language is supported.
-    if (lang == LANG_UNKNOWN) {
+    // If no_color is true, we can proceed even if the language is unknown.
+    if (lang == LANG_UNKNOWN && !no_color) {
         fprintf(stderr, "Error: Unsupported file type or language not specified.\n");
-        fprintf(stderr, "This program currently only supports .c and .py files.\n");
-        fprintf(stderr, "Please use a supported file or specify the language with -lang c|python.\n");
+        fprintf(stderr, "This program currently only supports .c and .py files for syntax highlighting.\n");
+        fprintf(stderr, "Please use a supported file, specify the language with -lang c|python, or use -no-color.\n");
         return 1;
     }
 
