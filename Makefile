@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c99 -D_USE_MATH_DEFINES
-LDFLAGS = $(shell pkg-config --libs cairo pango pangocairo glib-2.0 fontconfig) -lglib-2.0
+CFLAGS = -Wall -Wextra -std=c99 -D_USE_MATH_DEFINES -Os -flto -ffunction-sections -fdata-sections
+LDFLAGS = $(shell pkg-config --libs cairo pango pangocairo glib-2.0 fontconfig) -lglib-2.0 -flto -Wl,--gc-sections
 
 # Add include path for pkg-config and our src dir
 CPPFLAGS = $(shell pkg-config --cflags cairo pango pangocairo glib-2.0) -Isrc
