@@ -9,6 +9,7 @@
 
 #include "screenshot.h"
 #include "syntax_highlighting.h"
+#include "title_drawing.h"
 #include <fontconfig/fontconfig.h>
 
 // Helper function to detect the programming language from the filename extension.
@@ -48,6 +49,8 @@ int main(int argc, char *argv[]) {
     gboolean lang_option_used = FALSE;
     gboolean show_line_numbers = FALSE; // New flag for line numbers
     gboolean no_color = FALSE; // New flag for no syntax highlighting
+    const char *title = NULL;
+    int title_size = 12; // Default title font size
 
     const char *input_filename = NULL;
     const char *output_filename = NULL;
@@ -69,6 +72,26 @@ int main(int argc, char *argv[]) {
             show_line_numbers = TRUE;
         } else if (strcmp(argv[i], "-no-color") == 0) {
             no_color = TRUE;
+        } else if (strcmp(argv[i], "-t") == 0) {
+            if (i + 1 < argc) {
+                title = argv[i+1];
+                i++;
+            } else {
+                fprintf(stderr, "-t option requires a title argument.\n");
+                return 1;
+            }
+        } else if (strcmp(argv[i], "-Ts") == 0) {
+            if (i + 1 < argc) {
+                title_size = atoi(argv[i+1]);
+                if (title_size <= 0) {
+                    fprintf(stderr, "-Ts option requires a positive integer value.\n");
+                    return 1;
+                }
+                i++;
+            } else {
+                fprintf(stderr, "-Ts option requires a size argument.\n");
+                return 1;
+            }
         } else if (input_filename == NULL) {
             input_filename = argv[i];
         } else if (output_filename == NULL) {
@@ -85,6 +108,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "  -lang c|python    Specify language (default: auto-detect from extension).\n");
         fprintf(stderr, "  -no-gradient      Disable the gradient effect on the window header.\n");
         fprintf(stderr, "  -l                Show line numbers.\n");
+        fprintf(stderr, "  -t <title>        Set a custom title for the window.\n");
+        fprintf(stderr, "  -Ts <size>        Set the font size for the title (default: 12).\n");
         fprintf(stderr, "  -no-color         Disable syntax highlighting.\n");
         return 1;
     }
@@ -179,6 +204,9 @@ int main(int argc, char *argv[]) {
     cairo_set_source_rgb(cr, 0.6196, 0.8078, 0.4157); // Green
     cairo_arc(cr, PADDING / 2 + 70, PADDING / 2 + HEADER_HEIGHT / 2, 7, 0, 2 * M_PI);
     cairo_fill(cr);
+
+    // Draw the custom title if provided
+    draw_window_title(cr, title, img_width, title_size);
 
     layout = pango_cairo_create_layout(cr);
     font_desc = pango_font_description_from_string(FONT);

@@ -57,6 +57,8 @@ This will compile the source code and create an executable named `screenCODE` in
 - `-lang `: Manually specify the programming language for syntax highlighting. If omitted, the language is auto-detected from the file extension.
 - `-no-gradient`: Disable the gradient effect on the window header.
 - `-l`: Display line numbers next to the code.
+- `-t <title>`: Set a custom title for the window.
+- `-Ts <size>`: Set the font size for the title (default: 12).
 - `-no-color`: Disable syntax highlighting, showing plain text.
 
 ### Arguments:
