@@ -1,12 +1,10 @@
 # screenCODE
 
-This is a command-line tool written in C that generates a screenshot of source code files with syntax highlighting. It supports both C and Python syntax highlighting and allows for customization of the window header.
-
-**Important Note:** This is the first version of screenCODE. It may contain bugs, and its current functionality is limited to C and Python syntax highlighting, as these are the primary languages used by me.
+This is a command-line tool written in C that generates a screenshot of source code files with syntax highlighting. It supports both C, Python adn Golang syntax highlighting and allows for customization of the window header.
 
 ## Features
 
-- **Automatic Language Detection**: Automatically detects C or Python files based on their extension (`.c` or `.py`).
+- **Automatic Language Detection**: Automatically detects C, Python and Golang files based on their extension (`.c`, `.py` and `.go`).
 - **Syntax Highlighting**: Provides syntax highlighting for C and Python code.
 - **Disable Syntax Highlighting**: Option to disable syntax highlighting (`-no-color` flag).
 - **Line Numbers**: Option to display line numbers (`-l` flag).
@@ -55,6 +53,7 @@ This will compile the source code and create an executable named `screenCODE` in
 ### Options:
 
 - `-lang `: Manually specify the programming language for syntax highlighting. If omitted, the language is auto-detected from the file extension.
+- `-list-lang`: List supported languages.
 - `-no-gradient`: Disable the gradient effect on the window header.
 - `-l`: Display line numbers next to the code.
 - `-t <title>`: Set a custom title for the window.

@@ -30,9 +30,10 @@ char* highlight_syntax(const char* code, LanguageType lang, gboolean show_line_n
         return highlight_c_syntax(code, show_line_numbers);
     } else if (lang == LANG_PYTHON) {
         return highlight_python_syntax(code, show_line_numbers);
+    } else if (lang == LANG_GO) {
+        return highlight_go_syntax(code, show_line_numbers);
     } else {
-        // Fallback to C highlighting if the language is not recognized.
-        // This case should ideally not be reached due to checks in main.c.
-        return highlight_c_syntax(code, show_line_numbers);
+        // Fallback for unknown languages: just escape the text without highlighting.
+        return g_markup_escape_text(code, -1);
     }
 }

@@ -7,6 +7,7 @@
 typedef enum {
     LANG_C,
     LANG_PYTHON,
+    LANG_GO,
     LANG_UNKNOWN
 } LanguageType;
 
@@ -27,6 +28,11 @@ char* highlight_c_syntax(const char* code, gboolean show_line_numbers);
 void init_syntax_tables_python();
 void free_syntax_tables_python();
 char* highlight_python_syntax(const char* code, gboolean show_line_numbers);
+
+// Go-specific syntax highlighting functions.
+void init_syntax_tables_go();
+void free_syntax_tables_go();
+char* highlight_go_syntax(const char* code, gboolean show_line_numbers);
 
 // The main function that dispatches to the correct language highlighter.
 char* highlight_syntax(const char* code, LanguageType lang, gboolean show_line_numbers, gboolean no_color);
