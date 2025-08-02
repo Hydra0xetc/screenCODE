@@ -63,12 +63,12 @@ static gboolean append_and_highlight(GString *highlighted_code,
 void init_syntax_tables_python() {
   keywords_ht = g_hash_table_new(g_str_hash, g_str_equal);
   const char *keywords[] = {
-      "False",  "None",   "True",    "and",      "as",       "assert", "async",
-      "await",  "break",  "class",   "continue", "def",      "del",    "elif",
-      "else",   "except", "finally", "for",      "from",     "global", "if",
-      "import", "in",     "is",      "lambda",   "nonlocal", "not",    "or",
-      "pass",   "raise",  "return",  "try",      "while",    "with",   "yield",
-      "match",  "case",   NULL};
+      "import", "False", "None",   "True",    "and",      "as",   "assert",
+      "async",  "await", "break",  "class",   "continue", "def",  "del",
+      "elif",   "else",  "except", "finally", "for",      "from", "global",
+      "if",     "in",    "is",     "lambda",  "nonlocal", "not",  "or",
+      "pass",   "raise", "return", "try",     "while",    "with", "yield",
+      "match",  "case",  NULL};
   for (int i = 0; keywords[i] != NULL; i++) {
     g_hash_table_insert(keywords_ht, (gpointer)keywords[i], GINT_TO_POINTER(1));
   }
@@ -87,7 +87,7 @@ void init_syntax_tables_python() {
       "pow",        "reversed",  "slice",     "sorted",      "zip",
       "__import__", "any",       "all",       "chr",         "ord",
       "hex",        "oct",       "bin",       "classmethod", "staticmethod",
-      "property",   "bytearray", "bytes",     "memoryview",  NULL};
+      "property",   "bytearray", "bytes",     "memoryview",  "system", NULL};
   for (int i = 0; standard_functions[i] != NULL; i++) {
     g_hash_table_insert(standard_functions_ht, (gpointer)standard_functions[i],
                         GINT_TO_POINTER(1));
@@ -130,6 +130,7 @@ static gboolean
 highlight_tokens_on_line_python(GString *highlighted_line_gstring,
                                 const char *line_content,
                                 gchar *in_multiline_string) {
+  gboolean expect_module_name = FALSE;
   const char *ptr = line_content;
   const char *start_of_plain_text = line_content;
 
@@ -263,9 +264,20 @@ highlight_tokens_on_line_python(GString *highlighted_line_gstring,
              (!g_ascii_isalnum(*word_scan_ptr) && *word_scan_ptr != '_'));
 
         if (is_word_boundary) { // Only highlight if it's a whole word
-          if (g_hash_table_lookup(keywords_ht, word)) {
+          if (expect_module_name) {
             token_len = word_scan_ptr - current_token_start;
-            token_color = "#f7768e"; // Red
+            token_color = "#9ece6a"; // Green for module name
+            expect_module_name = FALSE;
+          } else if (g_hash_table_lookup(keywords_ht, word)) {
+            token_len = word_scan_ptr - current_token_start;
+            if (strcmp(word, "import") == 0) {
+              token_color = "#7aa2f7"; // Blue for 'import' keyword
+              expect_module_name = TRUE;
+            } else if (strcmp(word, "as") == 0) {
+              token_color = "#7aa2f7"; // Blue for 'as' keyword
+            } else {
+              token_color = "#f7768e"; // Red for other keywords
+            }
           } else {
             const char *lookahead = word_scan_ptr;
             while (*lookahead != '\0' && isspace(*lookahead))
@@ -273,7 +285,7 @@ highlight_tokens_on_line_python(GString *highlighted_line_gstring,
             if (*lookahead == '(' &&
                 g_hash_table_lookup(standard_functions_ht, word)) {
               token_len = word_scan_ptr - current_token_start;
-              token_color = "#7aa2f7"; // Blue
+              token_color = "#7aa2f7"; // Blue for functions
             }
           }
         }
