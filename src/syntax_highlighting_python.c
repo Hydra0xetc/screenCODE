@@ -131,6 +131,7 @@ highlight_tokens_on_line_python(GString *highlighted_line_gstring,
                                 const char *line_content,
                                 gchar *in_multiline_string) {
   gboolean expect_module_name = FALSE;
+  gboolean expect_alias_name = FALSE;
   const char *ptr = line_content;
   const char *start_of_plain_text = line_content;
 
@@ -265,16 +266,18 @@ highlight_tokens_on_line_python(GString *highlighted_line_gstring,
 
         if (is_word_boundary) { // Only highlight if it's a whole word
           if (expect_module_name) {
-            token_len = word_scan_ptr - current_token_start;
             token_color = "#9ece6a"; // Green for module name
             expect_module_name = FALSE;
+          } else if (expect_alias_name) {
+            token_color = "#9ece6a"; // Green for alias name
+            expect_alias_name = FALSE;
           } else if (g_hash_table_lookup(keywords_ht, word)) {
-            token_len = word_scan_ptr - current_token_start;
-            if (strcmp(word, "import") == 0) {
-              token_color = "#7aa2f7"; // Blue for 'import' keyword
+            if (strcmp(word, "import") == 0 || strcmp(word, "from") == 0) {
+              token_color = "#7aa2f7"; // Blue for 'import'/'from' keywords
               expect_module_name = TRUE;
             } else if (strcmp(word, "as") == 0) {
               token_color = "#7aa2f7"; // Blue for 'as' keyword
+              expect_alias_name = TRUE;
             } else {
               token_color = "#f7768e"; // Red for other keywords
             }
@@ -284,13 +287,12 @@ highlight_tokens_on_line_python(GString *highlighted_line_gstring,
               lookahead++;
             if (*lookahead == '(' &&
                 g_hash_table_lookup(standard_functions_ht, word)) {
-              token_len = word_scan_ptr - current_token_start;
               token_color = "#7aa2f7"; // Blue for functions
             }
           }
         }
         g_free(word);
-        token_len = word_scan_ptr - current_token_start; // Corrected line
+        token_len = word_scan_ptr - current_token_start;
       }
       // 5. Operators
       else {

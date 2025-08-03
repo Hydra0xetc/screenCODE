@@ -82,47 +82,42 @@ This will compile the source code and create an executable named `screenCODE` in
 <details>
 <summary>How it Works 👇</summary>
 
-The `screenCODE` program is designed to take a source code file (C or Python), apply syntax highlighting, and then generate a PNG image of the highlighted code, resembling a code editor screenshot.
+The `screenCODE` program is engineered to transform plain source code into a visually appealing PNG image that mimics a modern code editor's screenshot. The process involves several key stages, leveraging powerful libraries like Cairo for 2D graphics, Pango for text layout and rendering, and GLib for efficient data structures.
 
-Here's how it works in detail:
+Here’s a detailed breakdown of the internal workflow:
 
-1.  **Parsing Command Line Arguments (`main.c`)**:
-    *   The program processes the arguments you provide. `input_file` and `output_png` are mandatory.
-    *   The `-lang` argument allows manual language specification, overriding auto-detection.
-    *   The `-no-gradient` argument disables the header gradient.
-    *   The `-l` argument enables line numbers.
-    *   The new `-no-color` argument disables syntax highlighting.
+1.  **Initialization and Argument Parsing (`main.c`)**:
+    *   The program begins by initializing the `Fontconfig` library to ensure proper font discovery and management.
+    *   It then parses all command-line arguments (`-lang`, `-l`, `-t`, etc.) to configure the output. If a language isn't specified with `-lang`, it's automatically detected from the input file's extension (`.c`, `.py`, `.go`).
 
-2.  **Language Detection and Validation (`main.c`)**:
-    *   If `-lang` is not used, the program attempts to determine the language (C or Python) from the input file's extension.
-    *   It validates that the detected or specified language is supported. If not, it warns the user and exits.
+2.  **Syntax Data Loading (`main.c`)**:
+    *   Based on the determined language, a one-time initialization function (`init_syntax_tables_c`, `init_syntax_tables_python`, or `init_syntax_tables_go`) is called.
+    *   This function loads language-specific keywords, built-in functions, and other syntax elements into `GHashTable`s (efficient hash tables from GLib). This up-front loading ensures that token lookups during the highlighting phase are extremely fast.
 
-3.  **Fontconfig Initialization (`main.c`)**:
-    *   `FcInit()` is now called at the start of `main` to properly initialize the Fontconfig library, resolving previous warnings.
+3.  **Code Highlighting (`syntax_highlighting.c`, `syntax_highlighting_*.c`)**:
+    *   The core highlighting logic resides in the `highlight_syntax` function, which acts as a dispatcher. It calls the appropriate language-specific function (e.g., `highlight_python_syntax`).
+    *   The language-specific function iterates through the source code line by line. For each line, it scans for tokens in a specific order of precedence:
+        1.  **Multi-line constructs**: Checks for ongoing multi-line comments (C/Go) or strings (Python).
+        2.  **Strings & Comments**: Identifies string literals (`"..."`, `'''...'''`) and comments (`//`, `/*...*/`, `#`).
+        3.  **Numbers**: Recognizes various number formats (integers, floats, hex, etc.).
+        4.  **Keywords & Identifiers**: It extracts words and checks them against the pre-loaded `GHashTable`s. Special logic handles context-dependent highlighting, like function names following a `func` keyword in Go or module names after an `import` in Python.
+        5.  **Operators**: Matches against a sorted list of operators to find the longest possible match first (e.g., `>>=` before `>>`).
+    *   Each recognized token is escaped to prevent Pango markup conflicts and then wrapped in a `<span>` tag with a specific `foreground` color (e.g., `<span foreground='#f7768e'>return</span>`).
+    *   If line numbers (`-l`) are enabled, they are prepended to each line with consistent padding before the highlighting process begins.
 
-4.  **Syntax Table Initialization (`main.c`, `syntax_highlighting_c.c`, `syntax_highlighting_python.c`)**:
-    *   Syntax highlighting rules (keywords, functions, etc.) are loaded into efficient hash tables. This is now done once at the start of `main.c` based on the detected language, improving performance and preventing memory leaks.
+4.  **Text Measurement and Image Sizing (`main.c`)**:
+    *   Before creating the final image, the program uses a temporary Cairo surface and a Pango layout to accurately measure the pixel dimensions (width and height) of the fully highlighted, Pango-formatted text.
+    *   This measurement is crucial for calculating the final image size, ensuring no code gets clipped. The final dimensions include padding, header height, and shadow offsets.
 
-5.  **Reading Code File Content (`main.c`)**:
-    *   The entire content of the source code file is read into memory.
+5.  **Image Rendering with Cairo (`main.c`, `drawing_utils.c`, `title_drawing.c`)**:
+    *   A new Cairo surface (the canvas for our image) is created with the calculated dimensions.
+    *   The background, a subtle drop shadow, and the main window frame with rounded corners are drawn.
+    *   The window header is rendered, either as a solid color or a linear gradient, along with the decorative "traffic light" buttons.
+    *   If a title (`-t`) was provided, it is drawn and centered in the header using `draw_window_title`.
+    *   Finally, the Pango layout containing the highlighted code is rendered onto the Cairo surface at the correct position.
 
-6.  **Syntax Highlighting and Line Numbering (`syntax_highlighting.c`, `syntax_highlighting_c.c`, `syntax_highlighting_python.c`)**:
-    *   The `highlight_syntax` function dispatches to language-specific highlighting functions (`highlight_c_syntax` or `highlight_python_syntax`).
-    *   If `-no-color` is used, the code content is escaped for Pango markup and returned as plain text.
-    *   Otherwise, tokens (strings, comments, numbers, keywords, operators) are identified, escaped for Pango markup, and wrapped in `<span>` tags with specific colors.
-    *   If line numbers are enabled, they are prepended to each line with proper formatting before syntax highlighting is applied to the entire line.
+6.  **Output and Cleanup (`main.c`)**:
+    *   The completed Cairo surface is saved to a PNG file at the specified output path.
+    *   All allocated resources—memory for the code content, Pango layouts, Cairo surfaces, and the syntax hash tables—are meticulously freed to prevent memory leaks.
 
-7.  **Text Measurement and Image Dimensions (`main.c`)**:
-    *   Pango is used to calculate the exact dimensions of the highlighted text, including line numbers if present. This ensures the output image is sized correctly.
-
-8.  **PNG Image Drawing (`main.c`, `drawing_utils.c`)**:
-    *   A Cairo surface is created. The program draws the background, a subtle window shadow, the main window frame with rounded corners, and the window header (using the improved `draw_header` function).
-    *   Decorative window control buttons are added.
-    *   Finally, the Pango-formatted code (with or without line numbers) is drawn onto the surface.
-
-9.  **Image Saving (`main.c`)**:
-    *   The final image is saved as a PNG file.
-
-10. **Memory Cleanup (`main.c`)**:
-    *   All allocated memory and resources are properly freed at the end of the program execution.
 </details>
