@@ -1,5 +1,8 @@
 # screenCODE
 
+> [!WARNING]
+> This project is still under development and may contain bugs. Please use with caution.
+
 This is a command-line tool written in C that generates a screenshot of source code files with syntax highlighting. It supports both C, Python adn Golang syntax highlighting and allows for customization of the window header.
 
 ## Features
