@@ -87,7 +87,14 @@ void init_syntax_tables_python() {
       "pow",        "reversed",  "slice",     "sorted",      "zip",
       "__import__", "any",       "all",       "chr",         "ord",
       "hex",        "oct",       "bin",       "classmethod", "staticmethod",
-      "property",   "bytearray", "bytes",     "memoryview",  "system", NULL};
+      "property",   "bytearray", "bytes",     "memoryview",  "system",
+      "ascii",      "breakpoint","compile",   "eval",        "exec",
+      "format",     "globals",   "locals",    "repr",        "vars",
+      "aiter",      "anext",     "__build_class__", "__debug__", "__doc__",
+      "__loader__", "__name__",  "__package__", "__spec__",    "copyright",
+      "credits",    "exit",      "license",   "quit",
+      "acos", "acosh", "asin", "asinh", "atan", "atan2", "atanh", "ceil", "comb", "copysign", "cos", "cosh", "degrees", "dist", "erf", "erfc", "exp", "expm1", "fabs", "factorial", "floor", "fmod", "frexp", "fsum", "gamma", "gcd", "hypot", "isclose", "isfinite", "isinf", "isnan", "isqrt", "ldexp", "lgamma", "log", "log10", "log1p", "log2", "modf", "perm", "pow", "prod", "radians", "remainder", "sin", "sinh", "sqrt", "tan", "tanh", "trunc",
+      NULL};
   for (int i = 0; standard_functions[i] != NULL; i++) {
     g_hash_table_insert(standard_functions_ht, (gpointer)standard_functions[i],
                         GINT_TO_POINTER(1));
@@ -110,7 +117,7 @@ void free_syntax_tables_python() {
 // first.
 static const char *python_sorted_operators[] = {
     "**=", "//=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=",
-    ">>=", "<<=",                         // 3 chars
+    ">=>", "<<=",                         // 3 chars
     "==",  "!=",  ">=", "<=", "**", "//", // 2 chars
     "+",   "-",   "*",  "/",  "%",  "=",  ">",  "<",  "&",  "|",
     "^",   "~",   ".",  ":",  "[",  "]",  "{",  "}",  "(",  ")", // 1 char
@@ -135,6 +142,17 @@ highlight_tokens_on_line_python(GString *highlighted_line_gstring,
   const char *ptr = line_content;
   const char *start_of_plain_text = line_content;
 
+  // State for f-strings (local to the line)
+  static gboolean in_f_string = FALSE;
+  static char f_string_quote_char = 0;
+  static int f_string_brace_level = 0;
+
+  // Reset f-string state for a new line if not in a multi-line string
+  if (*in_multiline_string == 0) {
+      in_f_string = FALSE;
+      f_string_brace_level = 0;
+  }
+
   while (*ptr != '\0') {
     const char *current_token_start = ptr;
     size_t token_len = 0;
@@ -158,10 +176,53 @@ highlight_tokens_on_line_python(GString *highlighted_line_gstring,
         token_color = "#9ece6a";  // Green
         *in_multiline_string = 0; // We are now out of the multi-line string.
       }
-    } else {
-      // 1. Strings (triple, double, single quoted)
-      if ((*ptr == '"' && *(ptr + 1) == '"' && *(ptr + 2) == '"') ||
-          (*ptr == '\'' && *(ptr + 1) == '\'' && *(ptr + 2) == '\'')) {
+    } else if (in_f_string) {
+        if (*ptr == f_string_quote_char && f_string_brace_level == 0) { // End of f-string
+            in_f_string = FALSE;
+            token_len = 1;
+            token_color = "#9ece6a"; // Green for closing quote
+        } else if (*ptr == '{') {
+            if (*(ptr+1) == '{') { // Escaped brace
+                token_len = 2;
+                token_color = "#9ece6a";
+            } else {
+                f_string_brace_level++;
+                token_len = 1;
+                token_color = "#bb9af7"; // Purple for brace
+            }
+        } else if (*ptr == '}') {
+            if (*(ptr+1) == '}') { // Escaped brace
+                token_len = 2;
+                token_color = "#9ece6a";
+            } else {
+                if (f_string_brace_level > 0) {
+                    f_string_brace_level--;
+                }
+                token_len = 1;
+                token_color = "#bb9af7"; // Purple for brace
+            }
+        } else if (f_string_brace_level == 0) { // Inside f-string, outside braces
+            const char* scan_ptr = ptr;
+            while(*scan_ptr != '\0' && *scan_ptr != f_string_quote_char && *scan_ptr != '{') {
+                scan_ptr++;
+            }
+            token_len = scan_ptr - ptr;
+            token_color = "#9ece6a"; // Green for string part
+        } else { // Inside braces, treat as code
+            // This part will be handled by the general tokenizing logic below
+        }
+    }
+
+    if (token_len == 0) { // If not handled by f-string or multiline string logic
+      // 1. Strings (f-string, triple, double, single quoted)
+      if ((*ptr == 'f' || *ptr == 'F') && (*(ptr + 1) == '"' || *(ptr + 1) == '\'')) { // f-string start
+        in_f_string = TRUE;
+        f_string_quote_char = *(ptr + 1);
+        f_string_brace_level = 0;
+        token_len = 2; // f" or f'
+        token_color = "#9ece6a"; // Green
+      } else if ((*ptr == '"' && *(ptr + 1) == '"' && *(ptr + 2) == '"') ||
+                 (*ptr == '\'' && *(ptr + 1) == '\'' && *(ptr + 2) == '\'')) {
         char quote_char = *ptr;
         const char *scan_ptr = ptr + 3;
         *in_multiline_string = quote_char; // Enter multi-line string state
@@ -170,7 +231,7 @@ highlight_tokens_on_line_python(GString *highlighted_line_gstring,
                  *(scan_ptr + 2) == quote_char)) {
           scan_ptr++;
         }
-        if (*scan_ptr != '\0') {    // String ends on the same line
+        if (*scan_ptr != '\0') { // String ends on the same line
           scan_ptr += 3;            // Skip closing quotes
           *in_multiline_string = 0; // Exit state immediately
         }
@@ -181,8 +242,8 @@ highlight_tokens_on_line_python(GString *highlighted_line_gstring,
         char quote_char = *ptr;
         const char *scan_ptr = ptr + 1;
         while (*scan_ptr != '\0' && *scan_ptr != '\n') {
-          if (*scan_ptr == '\\' && *(scan_ptr + 1) != '\0') {
-            scan_ptr++; // Skip escaped character.
+          if (*scan_ptr == '\\' && *(scan_ptr + 1) != '\0') { // Skip escaped character. 
+            scan_ptr++; 
           } else if (*scan_ptr == quote_char) {
             scan_ptr++; // Include closing quote.
             break;
@@ -254,7 +315,7 @@ highlight_tokens_on_line_python(GString *highlighted_line_gstring,
         const char *word_scan_ptr = ptr;
         while (g_ascii_isalnum(*word_scan_ptr) || *word_scan_ptr == '_')
           word_scan_ptr++;
-        char *word =
+        char *word = 
             g_strndup(current_token_start, word_scan_ptr - current_token_start);
         if (!word)
           return FALSE; // Memory allocation failed
