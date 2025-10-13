@@ -1,2 +1,4 @@
 screenCODE
+.cache
+compile_commands.json
 *.o
