@@ -15,7 +15,8 @@ const double BORDER_RADIUS = 8.0;
 const char* FONT = "Monospace 12";
 
 /**
- * @brief Helper function to draw a rectangle with rounded corners for the window frame.
+ * @brief Helper function to draw a rectangle with rounded corners for the
+ * window frame.
  * @param cr The cairo drawing context.
  * @param x Top-left x coordinate.
  * @param y Top-left y coordinate.
@@ -23,7 +24,12 @@ const char* FONT = "Monospace 12";
  * @param height The height of the rectangle.
  * @param radius The corner radius.
  */
-void draw_rounded_rectangle(cairo_t *cr, double x, double y, double width, double height, double radius) {
+void draw_rounded_rectangle(cairo_t* cr,
+                            double x,
+                            double y,
+                            double width,
+                            double height,
+                            double radius) {
     cairo_new_sub_path(cr);
     cairo_arc(cr, x + width - radius, y + radius, radius, -M_PI / 2, 0);
     cairo_arc(cr, x + width - radius, y + height - radius, radius, 0, M_PI / 2);

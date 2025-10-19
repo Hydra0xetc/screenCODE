@@ -4,18 +4,14 @@
 #include <glib.h>
 
 // Defines the supported programming languages for syntax highlighting.
-typedef enum {
-    LANG_C,
-    LANG_PYTHON,
-    LANG_GO,
-    LANG_UNKNOWN
-} LanguageType;
+typedef enum { LANG_C, LANG_PYTHON, LANG_GO, LANG_UNKNOWN } LanguageType;
 
 // Declare global hash tables for syntax elements.
-// Using 'extern' makes them accessible from other files that include this header.
-extern GHashTable *keywords_ht;
-extern GHashTable *preprocessor_directives_ht;
-extern GHashTable *standard_functions_ht;
+// Using 'extern' makes them accessible from other files that include this
+// header.
+extern GHashTable* keywords_ht;
+extern GHashTable* preprocessor_directives_ht;
+extern GHashTable* standard_functions_ht;
 
 // --- Function Prototypes ---
 
@@ -35,6 +31,9 @@ void free_syntax_tables_go();
 char* highlight_go_syntax(const char* code, gboolean show_line_numbers);
 
 // The main function that dispatches to the correct language highlighter.
-char* highlight_syntax(const char* code, LanguageType lang, gboolean show_line_numbers, gboolean no_color);
+char* highlight_syntax(const char* code,
+                       LanguageType lang,
+                       gboolean show_line_numbers,
+                       gboolean no_color);
 
-#endif // SYNTAX_HIGHLIGHTING_H
+#endif  // SYNTAX_HIGHLIGHTING_H
