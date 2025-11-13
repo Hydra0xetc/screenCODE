@@ -1,5 +1,5 @@
 #include <ctype.h>
-#include <glib.h>  // Using GLib for efficient hash tables.
+#include <glib.h> // Using GLib for efficient hash tables.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,12 +26,13 @@ static gboolean append_and_highlight(GString *highlighted_code,
     if (start_of_plain_text < current_token_start) {
         char *plain_text = g_strndup(start_of_plain_text,
                                      current_token_start - start_of_plain_text);
-        if (!plain_text) return FALSE;  // Memory allocation failed
+        if (!plain_text)
+            return FALSE; // Memory allocation failed
         char *escaped_plain_text = g_markup_escape_text(plain_text, -1);
         if (!escaped_plain_text) {
             g_free(plain_text);
             return FALSE;
-        }  // Memory allocation failed
+        } // Memory allocation failed
         g_string_append(highlighted_code, escaped_plain_text);
         g_free(escaped_plain_text);
         g_free(plain_text);
@@ -39,12 +40,13 @@ static gboolean append_and_highlight(GString *highlighted_code,
 
     // Append the highlighted token itself.
     char *token_text = g_strndup(current_token_start, len);
-    if (!token_text) return FALSE;  // Memory allocation failed
+    if (!token_text)
+        return FALSE; // Memory allocation failed
     char *escaped_token = g_markup_escape_text(token_text, -1);
     if (!escaped_token) {
         g_free(token_text);
         return FALSE;
-    }  // Memory allocation failed
+    } // Memory allocation failed
 
     if (color) {
         g_string_append_printf(highlighted_code,
@@ -57,7 +59,7 @@ static gboolean append_and_highlight(GString *highlighted_code,
 
     g_free(escaped_token);
     g_free(token_text);
-    return TRUE;  // Success
+    return TRUE; // Success
 }
 
 /**
@@ -403,10 +405,12 @@ void init_syntax_tables_c() {
  * @brief Frees the memory used by the C syntax hash tables.
  */
 void free_syntax_tables_c() {
-    if (keywords_ht) g_hash_table_unref(keywords_ht);
+    if (keywords_ht)
+        g_hash_table_unref(keywords_ht);
     if (preprocessor_directives_ht)
         g_hash_table_unref(preprocessor_directives_ht);
-    if (standard_functions_ht) g_hash_table_unref(standard_functions_ht);
+    if (standard_functions_ht)
+        g_hash_table_unref(standard_functions_ht);
     keywords_ht = NULL;
     preprocessor_directives_ht = NULL;
     standard_functions_ht = NULL;
@@ -415,10 +419,10 @@ void free_syntax_tables_c() {
 // C operators, sorted by length to ensure the longest match is found first
 // (e.g., ">>=" before ">>", etc.).
 static const char *c_sorted_operators[] = {
-    ">>=", "<<=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=",  // 3 chars
-    "==",  "!=",  "<=", ">=", "&&", "||", "->", "++", "--",        // 2 chars
+    ">>=", "<<=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", // 3 chars
+    "==",  "!=",  "<=", ">=", "&&", "||", "->", "++", "--",       // 2 chars
     "+",   "-",   "*",  "/",  "%",  "=",  "<",  ">",  "!",  "&",
-    "|",   "^",   "~",  "<<", ">>", ".",  "?",  ":",  // 1 char
+    "|",   "^",   "~",  "<<", ">>", ".",  "?",  ":", // 1 char
     NULL};
 
 /**
@@ -468,9 +472,11 @@ static gboolean highlight_tokens_on_line(GString *highlighted_line_gstring,
 
         if (*ptr == '#') {
             const char *directive_end = ptr + 1;
-            while (g_ascii_isalpha(*directive_end)) directive_end++;
+            while (g_ascii_isalpha(*directive_end))
+                directive_end++;
             char *directive_word = g_strndup(ptr, directive_end - ptr);
-            if (!directive_word) return FALSE;
+            if (!directive_word)
+                return FALSE;
 
             if (strcmp(directive_word, "#include") == 0) {
                 if (!append_and_highlight(highlighted_line_gstring,
@@ -483,7 +489,8 @@ static gboolean highlight_tokens_on_line(GString *highlighted_line_gstring,
                 }
                 g_free(directive_word);
                 ptr = directive_end;
-                while (*ptr != '\0' && isspace(*ptr)) ptr++;
+                while (*ptr != '\0' && isspace(*ptr))
+                    ptr++;
 
                 char end_char = (*ptr == '<') ? '>' : '"';
                 if (*ptr == '<' || *ptr == '"') {
@@ -491,7 +498,8 @@ static gboolean highlight_tokens_on_line(GString *highlighted_line_gstring,
                     const char *header_end = header_start + 1;
                     while (*header_end != '\0' && *header_end != end_char)
                         header_end++;
-                    if (*header_end == end_char) header_end++;
+                    if (*header_end == end_char)
+                        header_end++;
 
                     if (!append_and_highlight(highlighted_line_gstring,
                                               directive_end,
@@ -553,23 +561,24 @@ static gboolean highlight_tokens_on_line(GString *highlighted_line_gstring,
             if (*num_scan_ptr != '\0' &&
                 (g_ascii_isalnum(*num_scan_ptr) || *num_scan_ptr == '_')) {
                 // This is part of an identifier, not a standalone number
-                token_color = NULL;  // Do not highlight
+                token_color = NULL; // Do not highlight
             } else {
-                token_color = "#ff9e64";  // Highlight as number
+                token_color = "#ff9e64"; // Highlight as number
             }
         } else if (g_ascii_isalpha(*ptr) || *ptr == '_') {
             const char *word_scan_ptr = ptr;
             while (g_ascii_isalnum(*word_scan_ptr) || *word_scan_ptr == '_')
                 word_scan_ptr++;
             char *word = g_strndup(ptr, word_scan_ptr - ptr);
-            if (!word) return FALSE;
+            if (!word)
+                return FALSE;
 
             // Check if the character after the word is a word boundary
             gboolean is_word_boundary =
                 (*word_scan_ptr == '\0' ||
                  (!g_ascii_isalnum(*word_scan_ptr) && *word_scan_ptr != '_'));
 
-            if (is_word_boundary) {  // Only highlight if it's a whole word
+            if (is_word_boundary) { // Only highlight if it's a whole word
                 if (g_hash_table_lookup(keywords_ht, word)) {
                     token_color = "#f7768e";
                 } else if (g_hash_table_lookup(standard_functions_ht, word)) {
@@ -583,7 +592,7 @@ static gboolean highlight_tokens_on_line(GString *highlighted_line_gstring,
             }
             g_free(word);
             token_len = word_scan_ptr - ptr;
-        } else {  // Operators
+        } else { // Operators
             for (int i = 0; c_sorted_operators[i] != NULL; i++) {
                 size_t op_len = strlen(c_sorted_operators[i]);
                 if (strncmp(ptr, c_sorted_operators[i], op_len) == 0) {
@@ -613,14 +622,15 @@ static gboolean highlight_tokens_on_line(GString *highlighted_line_gstring,
                                       1))
                 return FALSE;
             ptr++;
-            start_of_plain_text = ptr;  // Crucial: advance start_of_plain_text
+            start_of_plain_text = ptr; // Crucial: advance start_of_plain_text
         }
     }
 
     if (start_of_plain_text < ptr) {
         char *plain_text =
             g_strndup(start_of_plain_text, ptr - start_of_plain_text);
-        if (!plain_text) return FALSE;
+        if (!plain_text)
+            return FALSE;
         char *escaped_plain_text = g_markup_escape_text(plain_text, -1);
         if (!escaped_plain_text) {
             g_free(plain_text);
@@ -642,7 +652,8 @@ static gboolean highlight_tokens_on_line(GString *highlighted_line_gstring,
  */
 char *highlight_c_syntax(const char *code, gboolean show_line_numbers) {
     GString *final_highlighted_code = g_string_new("");
-    if (!final_highlighted_code) return NULL;  // Memory allocation failed
+    if (!final_highlighted_code)
+        return NULL; // Memory allocation failed
 
     char **code_lines = g_strsplit(code, "\n", -1);
     if (!code_lines) {
@@ -673,7 +684,7 @@ char *highlight_c_syntax(const char *code, gboolean show_line_numbers) {
 
     int current_line_num = 1;
     gboolean in_multiline_comment =
-        FALSE;  // State tracking for multi-line comments
+        FALSE; // State tracking for multi-line comments
 
     for (char **line_ptr = code_lines; *line_ptr != NULL; line_ptr++) {
         // Skip empty last line if it was a trailing newline
@@ -709,15 +720,14 @@ char *highlight_c_syntax(const char *code, gboolean show_line_numbers) {
         g_string_append(final_highlighted_code, current_line_gstring->str);
         g_string_free(current_line_gstring, TRUE);
 
-        if (line_ptr[1] !=
-            NULL) {  // Don't add a newline for the very last line
+        if (line_ptr[1] != NULL) { // Don't add a newline for the very last line
             g_string_append_c(final_highlighted_code, '\n');
         }
 
         current_line_num++;
     }
 
-    g_strfreev(code_lines);  // Free the array of strings
+    g_strfreev(code_lines); // Free the array of strings
 
     return g_string_free(final_highlighted_code, FALSE);
 }

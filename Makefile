@@ -8,11 +8,14 @@ CPPFLAGS = $(shell pkg-config --cflags cairo pango pangocairo glib-2.0) -Isrc
 # Source directory
 SRC_DIR = src
 
+# Object directory
+OBJ_DIR = obj
+
 # Find all .c files in the source directory, excluding test files
 SRCS = $(filter-out $(SRC_DIR)/test_c_code.c, $(wildcard $(SRC_DIR)/*.c))
 
-# Create object file names in the root directory
-OBJS = $(patsubst $(SRC_DIR)/%.c,%.o,$(SRCS))
+# Create object file names in the obj directory
+OBJS = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
 
 TARGET = screenCODE
 
@@ -23,9 +26,14 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CC) $(OBJS) -o $(TARGET) $(LDFLAGS)
 
-# Rule to compile .c files from the src directory into .o files in the root
-%.o: $(SRC_DIR)/%.c
+# Rule to compile .c files from the src directory into .o files in obj directory
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
+$(OBJ_DIR):
+	@mkdir -p $@
+
 clean:
-	rm -f $(OBJS) $(TARGET) *.d *.gch
+	rm -rf $(OBJ_DIR) $(TARGET) *.d *.gch
+
+rebuild: clean all

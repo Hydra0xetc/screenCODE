@@ -22,7 +22,7 @@ Here are some examples of how to install these dependencies on various systems:
 
 - **Termux (Android)**:
   ```bash
-  pkg install git clang make pkg-config libcairo pango glib fontconfig
+  pkg install git clang make pkg-config libcairo pango xorgproto fontconfig
   ```
 
 - **Arch Linux**:

@@ -25,24 +25,26 @@ static gboolean append_and_highlight(GString *highlighted_code,
     if (start_of_plain_text != current_token_start) {
         char *plain_text = g_strndup(start_of_plain_text,
                                      current_token_start - start_of_plain_text);
-        if (!plain_text) return FALSE;  // Memory allocation failed
+        if (!plain_text)
+            return FALSE; // Memory allocation failed
         char *escaped_plain_text = g_markup_escape_text(plain_text, -1);
         if (!escaped_plain_text) {
             g_free(plain_text);
             return FALSE;
-        }  // Memory allocation failed
+        } // Memory allocation failed
         g_string_append(highlighted_code, escaped_plain_text);
         g_free(escaped_plain_text);
         g_free(plain_text);
     }
     // Append the highlighted token itself.
     char *token_text = g_strndup(current_token_start, len);
-    if (!token_text) return FALSE;  // Memory allocation failed
+    if (!token_text)
+        return FALSE; // Memory allocation failed
     char *escaped_token = g_markup_escape_text(token_text, -1);
     if (!escaped_token) {
         g_free(token_text);
         return FALSE;
-    }  // Memory allocation failed
+    } // Memory allocation failed
 
     if (color) {
         g_string_append_printf(highlighted_code,
@@ -55,7 +57,7 @@ static gboolean append_and_highlight(GString *highlighted_code,
 
     g_free(escaped_token);
     g_free(token_text);
-    return TRUE;  // Success
+    return TRUE; // Success
 }
 
 /**
@@ -135,8 +137,10 @@ void init_syntax_tables_python() {
  * @brief Frees the memory used by the Python syntax hash tables.
  */
 void free_syntax_tables_python() {
-    if (keywords_ht) g_hash_table_unref(keywords_ht);
-    if (standard_functions_ht) g_hash_table_unref(standard_functions_ht);
+    if (keywords_ht)
+        g_hash_table_unref(keywords_ht);
+    if (standard_functions_ht)
+        g_hash_table_unref(standard_functions_ht);
     keywords_ht = NULL;
     standard_functions_ht = NULL;
 }
@@ -145,10 +149,10 @@ void free_syntax_tables_python() {
 // first.
 static const char *python_sorted_operators[] = {
     "**=", "//=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=",
-    ">=>", "<<=",                          // 3 chars
-    "==",  "!=",  ">=", "<=", "**", "//",  // 2 chars
+    ">=>", "<<=",                         // 3 chars
+    "==",  "!=",  ">=", "<=", "**", "//", // 2 chars
     "+",   "-",   "*",  "/",  "%",  "=",  ">",  "<",  "&",  "|",
-    "^",   "~",   ".",  ":",  "[",  "]",  "{",  "}",  "(",  ")",  // 1 char
+    "^",   "~",   ".",  ":",  "[",  "]",  "{",  "}",  "(",  ")", // 1 char
     NULL};
 
 /**
@@ -161,10 +165,10 @@ static const char *python_sorted_operators[] = {
  * a multi-line string, and what quote char it is.
  * @return TRUE on success, FALSE if memory allocation fails.
  */
-static gboolean highlight_tokens_on_line_python(
-    GString *highlighted_line_gstring,
-    const char *line_content,
-    gchar *in_multiline_string) {
+static gboolean
+highlight_tokens_on_line_python(GString *highlighted_line_gstring,
+                                const char *line_content,
+                                gchar *in_multiline_string) {
     gboolean expect_module_name = FALSE;
     gboolean expect_alias_name = FALSE;
     const char *ptr = line_content;
@@ -196,32 +200,32 @@ static gboolean highlight_tokens_on_line_python(
                 scan_ptr++;
             }
 
-            if (*scan_ptr == '\0') {  // End of line, but not end of string
+            if (*scan_ptr == '\0') { // End of line, but not end of string
                 token_len = strlen(ptr);
-                token_color = "#9ece6a";  // Green
-            } else {                      // Found closing triple quotes
+                token_color = "#9ece6a"; // Green
+            } else {                     // Found closing triple quotes
                 token_len = (scan_ptr + 3) - ptr;
-                token_color = "#9ece6a";  // Green
+                token_color = "#9ece6a"; // Green
                 *in_multiline_string =
-                    0;  // We are now out of the multi-line string.
+                    0; // We are now out of the multi-line string.
             }
         } else if (in_f_string) {
             if (*ptr == f_string_quote_char &&
-                f_string_brace_level == 0) {  // End of f-string
+                f_string_brace_level == 0) { // End of f-string
                 in_f_string = FALSE;
                 token_len = 1;
-                token_color = "#9ece6a";  // Green for closing quote
+                token_color = "#9ece6a"; // Green for closing quote
             } else if (*ptr == '{') {
-                if (*(ptr + 1) == '{') {  // Escaped brace
+                if (*(ptr + 1) == '{') { // Escaped brace
                     token_len = 2;
                     token_color = "#9ece6a";
                 } else {
                     f_string_brace_level++;
                     token_len = 1;
-                    token_color = "#bb9af7";  // Purple for brace
+                    token_color = "#bb9af7"; // Purple for brace
                 }
             } else if (*ptr == '}') {
-                if (*(ptr + 1) == '}') {  // Escaped brace
+                if (*(ptr + 1) == '}') { // Escaped brace
                     token_len = 2;
                     token_color = "#9ece6a";
                 } else {
@@ -229,33 +233,33 @@ static gboolean highlight_tokens_on_line_python(
                         f_string_brace_level--;
                     }
                     token_len = 1;
-                    token_color = "#bb9af7";  // Purple for brace
+                    token_color = "#bb9af7"; // Purple for brace
                 }
             } else if (f_string_brace_level ==
-                       0) {  // Inside f-string, outside braces
+                       0) { // Inside f-string, outside braces
                 const char *scan_ptr = ptr;
                 while (*scan_ptr != '\0' && *scan_ptr != f_string_quote_char &&
                        *scan_ptr != '{') {
                     scan_ptr++;
                 }
                 token_len = scan_ptr - ptr;
-                token_color = "#9ece6a";  // Green for string part
-            } else {                      // Inside braces, treat as code
+                token_color = "#9ece6a"; // Green for string part
+            } else {                     // Inside braces, treat as code
                 // This part will be handled by the general tokenizing logic
                 // below
             }
         }
 
         if (token_len ==
-            0) {  // If not handled by f-string or multiline string logic
+            0) { // If not handled by f-string or multiline string logic
             // 1. Strings (f-string, triple, double, single quoted)
             if ((*ptr == 'f' || *ptr == 'F') &&
-                (*(ptr + 1) == '"' || *(ptr + 1) == '\'')) {  // f-string start
+                (*(ptr + 1) == '"' || *(ptr + 1) == '\'')) { // f-string start
                 in_f_string = TRUE;
                 f_string_quote_char = *(ptr + 1);
                 f_string_brace_level = 0;
-                token_len = 2;            // f" or f'
-                token_color = "#9ece6a";  // Green
+                token_len = 2;           // f" or f'
+                token_color = "#9ece6a"; // Green
             } else if ((*ptr == '"' && *(ptr + 1) == '"' &&
                         *(ptr + 2) == '"') ||
                        (*ptr == '\'' && *(ptr + 1) == '\'' &&
@@ -263,34 +267,34 @@ static gboolean highlight_tokens_on_line_python(
                 char quote_char = *ptr;
                 const char *scan_ptr = ptr + 3;
                 *in_multiline_string =
-                    quote_char;  // Enter multi-line string state
+                    quote_char; // Enter multi-line string state
                 while (*scan_ptr != '\0' && !(*scan_ptr == quote_char &&
                                               *(scan_ptr + 1) == quote_char &&
                                               *(scan_ptr + 2) == quote_char)) {
                     scan_ptr++;
                 }
-                if (*scan_ptr != '\0') {       // String ends on the same line
-                    scan_ptr += 3;             // Skip closing quotes
-                    *in_multiline_string = 0;  // Exit state immediately
+                if (*scan_ptr != '\0') {      // String ends on the same line
+                    scan_ptr += 3;            // Skip closing quotes
+                    *in_multiline_string = 0; // Exit state immediately
                 }
                 token_len = scan_ptr - ptr;
-                token_color = "#9ece6a";  // Green
+                token_color = "#9ece6a"; // Green
             } else if (*ptr == '"' || *ptr == '\'') {
                 // Regular single-line strings
                 char quote_char = *ptr;
                 const char *scan_ptr = ptr + 1;
                 while (*scan_ptr != '\0' && *scan_ptr != '\n') {
                     if (*scan_ptr == '\\' &&
-                        *(scan_ptr + 1) != '\0') {  // Skip escaped character.
+                        *(scan_ptr + 1) != '\0') { // Skip escaped character.
                         scan_ptr++;
                     } else if (*scan_ptr == quote_char) {
-                        scan_ptr++;  // Include closing quote.
+                        scan_ptr++; // Include closing quote.
                         break;
                     }
                     scan_ptr++;
                 }
                 token_len = scan_ptr - ptr;
-                token_color = "#9ece6a";  // Green
+                token_color = "#9ece6a"; // Green
             }
             // 2. Comments
             else if (*ptr == '#') {
@@ -299,7 +303,7 @@ static gboolean highlight_tokens_on_line_python(
                     scan_ptr++;
                 }
                 token_len = scan_ptr - ptr;
-                token_color = "#545c7e";  // Grey
+                token_color = "#545c7e"; // Grey
             }
             // 3. Numbers
             else if (g_ascii_isdigit(*ptr) ||
@@ -307,33 +311,37 @@ static gboolean highlight_tokens_on_line_python(
                 const char *num_scan_ptr = ptr;
                 if (*num_scan_ptr == '0' &&
                     (*(num_scan_ptr + 1) == 'x' ||
-                     *(num_scan_ptr + 1) == 'X')) {  // Hex
+                     *(num_scan_ptr + 1) == 'X')) { // Hex
                     num_scan_ptr += 2;
-                    while (g_ascii_isxdigit(*num_scan_ptr)) num_scan_ptr++;
+                    while (g_ascii_isxdigit(*num_scan_ptr))
+                        num_scan_ptr++;
                 } else if (*num_scan_ptr == '0' &&
                            (*(num_scan_ptr + 1) == 'o' ||
-                            *(num_scan_ptr + 1) == 'O')) {  // Octal
+                            *(num_scan_ptr + 1) == 'O')) { // Octal
                     num_scan_ptr += 2;
                     while (*num_scan_ptr >= '0' && *num_scan_ptr <= '7')
                         num_scan_ptr++;
                 } else if (*num_scan_ptr == '0' &&
                            (*(num_scan_ptr + 1) == 'b' ||
-                            *(num_scan_ptr + 1) == 'B')) {  // Binary
+                            *(num_scan_ptr + 1) == 'B')) { // Binary
                     num_scan_ptr += 2;
                     while (*num_scan_ptr == '0' || *num_scan_ptr == '1')
                         num_scan_ptr++;
-                } else {  // Decimal or float
-                    while (g_ascii_isdigit(*num_scan_ptr)) num_scan_ptr++;
+                } else { // Decimal or float
+                    while (g_ascii_isdigit(*num_scan_ptr))
+                        num_scan_ptr++;
                     if (*num_scan_ptr == '.') {
                         num_scan_ptr++;
-                        while (g_ascii_isdigit(*num_scan_ptr)) num_scan_ptr++;
+                        while (g_ascii_isdigit(*num_scan_ptr))
+                            num_scan_ptr++;
                     }
                     if (*num_scan_ptr == 'e' ||
-                        *num_scan_ptr == 'E') {  // Exponent
+                        *num_scan_ptr == 'E') { // Exponent
                         num_scan_ptr++;
                         if (*num_scan_ptr == '+' || *num_scan_ptr == '-')
                             num_scan_ptr++;
-                        while (g_ascii_isdigit(*num_scan_ptr)) num_scan_ptr++;
+                        while (g_ascii_isdigit(*num_scan_ptr))
+                            num_scan_ptr++;
                     }
                 }
                 token_len = num_scan_ptr - ptr;
@@ -342,9 +350,9 @@ static gboolean highlight_tokens_on_line_python(
                 if (*num_scan_ptr != '\0' &&
                     (g_ascii_isalnum(*num_scan_ptr) || *num_scan_ptr == '_')) {
                     // This is part of an identifier, not a standalone number
-                    token_color = NULL;  // Do not highlight
+                    token_color = NULL; // Do not highlight
                 } else {
-                    token_color = "#ff9e64";  // Highlight as number
+                    token_color = "#ff9e64"; // Highlight as number
                 }
             }
             // 4. Keywords and Functions
@@ -354,7 +362,8 @@ static gboolean highlight_tokens_on_line_python(
                     word_scan_ptr++;
                 char *word = g_strndup(current_token_start,
                                        word_scan_ptr - current_token_start);
-                if (!word) return FALSE;  // Memory allocation failed
+                if (!word)
+                    return FALSE; // Memory allocation failed
 
                 // Check if the character after the word is a word boundary
                 gboolean is_word_boundary =
@@ -362,24 +371,24 @@ static gboolean highlight_tokens_on_line_python(
                      (!g_ascii_isalnum(*word_scan_ptr) &&
                       *word_scan_ptr != '_'));
 
-                if (is_word_boundary) {  // Only highlight if it's a whole word
+                if (is_word_boundary) { // Only highlight if it's a whole word
                     if (expect_module_name) {
-                        token_color = "#9ece6a";  // Green for module name
+                        token_color = "#9ece6a"; // Green for module name
                         expect_module_name = FALSE;
                     } else if (expect_alias_name) {
-                        token_color = "#9ece6a";  // Green for alias name
+                        token_color = "#9ece6a"; // Green for alias name
                         expect_alias_name = FALSE;
                     } else if (g_hash_table_lookup(keywords_ht, word)) {
                         if (strcmp(word, "import") == 0 ||
                             strcmp(word, "from") == 0) {
                             token_color =
-                                "#7aa2f7";  // Blue for 'import'/'from' keywords
+                                "#7aa2f7"; // Blue for 'import'/'from' keywords
                             expect_module_name = TRUE;
                         } else if (strcmp(word, "as") == 0) {
-                            token_color = "#7aa2f7";  // Blue for 'as' keyword
+                            token_color = "#7aa2f7"; // Blue for 'as' keyword
                             expect_alias_name = TRUE;
                         } else {
-                            token_color = "#f7768e";  // Red for other keywords
+                            token_color = "#f7768e"; // Red for other keywords
                         }
                     } else {
                         const char *lookahead = word_scan_ptr;
@@ -387,7 +396,7 @@ static gboolean highlight_tokens_on_line_python(
                             lookahead++;
                         if (*lookahead == '(' &&
                             g_hash_table_lookup(standard_functions_ht, word)) {
-                            token_color = "#7aa2f7";  // Blue for functions
+                            token_color = "#7aa2f7"; // Blue for functions
                         }
                     }
                 }
@@ -400,7 +409,7 @@ static gboolean highlight_tokens_on_line_python(
                     size_t op_len = strlen(python_sorted_operators[i]);
                     if (strncmp(ptr, python_sorted_operators[i], op_len) == 0) {
                         token_len = op_len;
-                        token_color = "#bb9af7";  // Purple
+                        token_color = "#bb9af7"; // Purple
                         break;
                     }
                 }
@@ -414,7 +423,7 @@ static gboolean highlight_tokens_on_line_python(
                                       current_token_start,
                                       token_color,
                                       token_len)) {
-                return FALSE;  // Memory allocation failed
+                return FALSE; // Memory allocation failed
             }
             ptr += token_len;
             start_of_plain_text = ptr;
@@ -428,7 +437,7 @@ static gboolean highlight_tokens_on_line_python(
                                       1))
                 return FALSE;
             ptr++;
-            start_of_plain_text = ptr;  // Crucial: advance start_of_plain_text
+            start_of_plain_text = ptr; // Crucial: advance start_of_plain_text
         }
     }
 
@@ -436,12 +445,13 @@ static gboolean highlight_tokens_on_line_python(
     if (start_of_plain_text != ptr) {
         char *plain_text =
             g_strndup(start_of_plain_text, ptr - start_of_plain_text);
-        if (!plain_text) return FALSE;  // Memory allocation failed
+        if (!plain_text)
+            return FALSE; // Memory allocation failed
         char *escaped_plain_text = g_markup_escape_text(plain_text, -1);
         if (!escaped_plain_text) {
             g_free(plain_text);
             return FALSE;
-        }  // Memory allocation failed
+        } // Memory allocation failed
         g_string_append(highlighted_line_gstring, escaped_plain_text);
         g_free(escaped_plain_text);
         g_free(plain_text);
@@ -458,7 +468,8 @@ static gboolean highlight_tokens_on_line_python(
  */
 char *highlight_python_syntax(const char *code, gboolean show_line_numbers) {
     GString *final_highlighted_code = g_string_new("");
-    if (!final_highlighted_code) return NULL;  // Memory allocation failed
+    if (!final_highlighted_code)
+        return NULL; // Memory allocation failed
 
     char **code_lines = g_strsplit(code, "\n", -1);
     if (!code_lines) {
@@ -488,8 +499,8 @@ char *highlight_python_syntax(const char *code, gboolean show_line_numbers) {
     }
 
     int current_line_num = 1;
-    gchar in_multiline_string = 0;  // State tracking for multi-line strings, 0
-                                    // means no, '"' or '\'' means yes
+    gchar in_multiline_string = 0; // State tracking for multi-line strings, 0
+                                   // means no, '"' or '\'' means yes
 
     for (char **line_ptr = code_lines; *line_ptr != NULL; line_ptr++) {
         // Skip empty last line if it was a trailing newline
@@ -526,20 +537,20 @@ char *highlight_python_syntax(const char *code, gboolean show_line_numbers) {
         g_string_append(final_highlighted_code, current_line_gstring->str);
         g_string_free(
             current_line_gstring,
-            TRUE);  // Free the GString, but not its content as it's appended.
+            TRUE); // Free the GString, but not its content as it's appended.
 
         // Only add newline if it's not the very last line and it's not an empty
         // trailing line
         if (!(*line_ptr == code_lines[max_line_number - 1] &&
               strlen(*line_ptr) == 0 && max_line_number > 0)) {
             g_string_append_c(final_highlighted_code,
-                              '\n');  // Add newline back
+                              '\n'); // Add newline back
         }
 
         current_line_num++;
     }
 
-    g_strfreev(code_lines);  // Free the array of strings
+    g_strfreev(code_lines); // Free the array of strings
 
     return g_string_free(final_highlighted_code, FALSE);
 }

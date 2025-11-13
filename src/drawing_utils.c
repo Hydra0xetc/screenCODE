@@ -12,7 +12,7 @@ const double HEADER_HEIGHT = 40.0;
 const double SHADOW_OFFSET = 10.0;
 const double SHADOW_BLUR = 15.0;
 const double BORDER_RADIUS = 8.0;
-const char* FONT = "Monospace 12";
+const char *FONT = "Monospace 12";
 
 /**
  * @brief Helper function to draw a rectangle with rounded corners for the
@@ -24,7 +24,7 @@ const char* FONT = "Monospace 12";
  * @param height The height of the rectangle.
  * @param radius The corner radius.
  */
-void draw_rounded_rectangle(cairo_t* cr,
+void draw_rounded_rectangle(cairo_t *cr,
                             double x,
                             double y,
                             double width,

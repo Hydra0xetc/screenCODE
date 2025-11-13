@@ -16,6 +16,11 @@ extern const char *FONT;
 
 // Global hash tables for faster lookups
 
-void draw_rounded_rectangle(cairo_t *cr, double x, double y, double width, double height, double radius);
+void draw_rounded_rectangle(cairo_t *cr,
+                            double x,
+                            double y,
+                            double width,
+                            double height,
+                            double radius);
 
 #endif // SCREENSHOT_H

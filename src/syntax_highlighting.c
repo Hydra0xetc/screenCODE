@@ -1,6 +1,6 @@
 #include "syntax_highlighting.h"
 
-#include <glib.h>  // Using GLib for efficient hash tables.
+#include <glib.h> // Using GLib for efficient hash tables.
 
 // Use global hash tables for syntax elements (keywords, etc.)
 // This allows for quick lookups while parsing the code.
